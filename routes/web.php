@@ -20,3 +20,6 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 });
+
+Route::middleware(['auth'])->group(function () {
+});

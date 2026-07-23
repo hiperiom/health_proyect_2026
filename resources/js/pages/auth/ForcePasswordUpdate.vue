@@ -5,7 +5,7 @@ import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { update } from '@/routes/password/force-update';
+import { update } from '@/routes/password';
 
 defineOptions({
     layout: {

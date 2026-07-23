@@ -204,6 +204,35 @@ function roleLabel(slug: string | null | undefined): string {
 
     return availableRoles.value.find((role: RoleOption) => role.value === slug)?.label ?? slug;
 }
+
+function roleClasses(slug: string | null | undefined): string {
+    if (!slug) {
+        return 'border-transparent bg-muted text-muted-foreground';
+    }
+    const role = availableRoles.value.find((r: RoleOption) => r.value === slug);
+
+    if (role) {
+        const parts: string[] = [];
+        if (role.color_class) parts.push(role.color_class);
+        if (role.text_class) parts.push(role.text_class);
+        // ensure border-transparent if not provided
+        parts.push('border-transparent');
+
+        return parts.join(' ');
+    }
+
+    return 'border-transparent bg-secondary text-secondary-foreground';
+}
+
+function roleIcon(slug: string | null | undefined): string | null {
+    if (!slug) {
+        return null;
+    }
+
+    const role = availableRoles.value.find((r: RoleOption) => r.value === slug);
+
+    return role?.icon_svg ?? null;
+}
 </script>
 
 <template>
@@ -428,8 +457,9 @@ function roleLabel(slug: string | null | undefined): string {
                         <td class="px-4 py-3">
                             <span
                                 class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                                :class="item.role === 'administrador' || item.role === 'superusuario' ? 'border-transparent bg-primary text-primary-foreground' : 'border-transparent bg-secondary text-secondary-foreground'"
+                                :class="roleClasses(item.role)"
                             >
+                                <span v-if="roleIcon(item.role)" class="mr-2 w-4 h-4" v-html="roleIcon(item.role)"></span>
                                 {{ roleLabel(item.role) }}
                             </span>
                         </td>

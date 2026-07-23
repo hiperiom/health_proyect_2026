@@ -166,10 +166,20 @@ class UserController extends Controller
     /** @return array<int, array{value: string, label: string}> */
     private function availableRoles(): array
     {
+        $slugs = array_map(fn (UserRole $r) => $r->value, UserRole::cases());
+
+        $roles = Role::query()
+            ->whereIn('slug', $slugs)
+            ->get(['slug', 'name', 'color_class', 'text_class', 'icon_svg'])
+            ->keyBy('slug');
+
         return collect(UserRole::cases())
             ->map(fn (UserRole $role): array => [
                 'value' => $role->value,
                 'label' => $role->label(),
+                'color_class' => $roles[$role->value]->color_class ?? null,
+                'text_class' => $roles[$role->value]->text_class ?? null,
+                'icon_svg' => $roles[$role->value]->icon_svg ?? null,
             ])
             ->all();
     }

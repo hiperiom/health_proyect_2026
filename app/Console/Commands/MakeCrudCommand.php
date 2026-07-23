@@ -29,9 +29,6 @@ class MakeCrudCommand extends Command
 
         $this->info("Generating CRUD for: {$model} ({$plural})");
 
-        if ($model === 'User') {
-            $this->createUserCrud($plural, $pluralUpper);
-        } else {
             // Backend
             $this->createModel($model);
             $this->createMigration($timestamp, $plural, $model);
@@ -46,7 +43,6 @@ class MakeCrudCommand extends Command
             $this->updateTypeScriptIndex($plural);
             $this->updateTypeScriptRoutesIndex($plural);
             $this->addSidebarNavigation($plural, $model, $pluralUpper);
-        }
 
         $this->info('Regenerating Wayfinder types...');
         $this->call('wayfinder:generate', ['--with-form' => true]);

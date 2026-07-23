@@ -29,7 +29,7 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('12345678'),
+            'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -51,6 +51,7 @@ class UserFactory extends Factory
         })->state(fn (): array => [
             'name' => 'Superusuario',
             'email' => 'superusuario@test.com',
+            'password' => Hash::make('12345678'),
         ]);
     }
 
@@ -68,6 +69,7 @@ class UserFactory extends Factory
         })->state(fn (): array => [
             'name' => 'Paciente',
             'email' => 'paciente@test.com',
+            'password' => Hash::make('12345678'),
         ]);
     }
 
@@ -85,6 +87,7 @@ class UserFactory extends Factory
         })->state(fn (): array => [
             'name' => 'Doctor',
             'email' => 'doctor@test.com',
+            'password' => Hash::make('12345678'),
         ]);
     }
 
@@ -102,6 +105,7 @@ class UserFactory extends Factory
         })->state(fn (): array => [
             'name' => 'Administrador',
             'email' => 'admin@test.com',
+            'password' => Hash::make('12345678'),
         ]);
     }
 
@@ -119,6 +123,7 @@ class UserFactory extends Factory
         })->state(fn (): array => [
             'name' => 'Enfermería',
             'email' => 'enfermeria@test.com',
+            'password' => Hash::make('12345678'),
         ]);
     }
 
@@ -136,6 +141,7 @@ class UserFactory extends Factory
         })->state(fn (): array => [
             'name' => 'Asistencial',
             'email' => 'asistencial@test.com',
+            'password' => Hash::make('12345678'),
         ]);
     }
 
