@@ -3,6 +3,7 @@
 namespace App\Http\Responses;
 
 use App\Http\Responses\Concerns\RedirectsToCurrentTeam;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Fortify;
@@ -14,8 +15,17 @@ class LoginResponse implements LoginResponseContract
 
     public function toResponse($request): Response
     {
-        return $request->wantsJson()
-            ? new JsonResponse(['two_factor' => false], 200)
-            : redirect()->intended($this->redirectPathForCurrentTeam($request, Fortify::redirects('login')));
+        if ($request->wantsJson()) {
+            return new JsonResponse(['two_factor' => false], 200);
+        }
+
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($user && ! $user->password_updated) {
+            return redirect()->route('password.force-update');
+        }
+
+        return redirect()->intended($this->redirectPathForCurrentTeam($request, Fortify::redirects('login')));
     }
 }

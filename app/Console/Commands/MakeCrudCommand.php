@@ -6,19 +6,20 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Symfony\Component\Finder\SplFileInfo;
 
 class MakeCrudCommand extends Command
 {
     protected $signature = 'make:crud {name : The singular model name (PascalCase)} {--migrate : Run the migration after generating files}';
+
     protected $description = 'Generate a full CRUD (backend + frontend Inertia/Vue) for the given model';
 
     public function handle(): void
     {
         $model = Str::of($this->argument('name'))->trim()->toString();
 
-        if (!ctype_upper($model[0])) {
+        if (! ctype_upper($model[0])) {
             $this->error('Model name must be PascalCase (e.g. Patient, Product, Post).');
+
             return;
         }
 
@@ -28,19 +29,24 @@ class MakeCrudCommand extends Command
 
         $this->info("Generating CRUD for: {$model} ({$plural})");
 
-        // Backend
-        $this->createModel($model);
-        $this->createMigration($timestamp, $plural, $model);
-        $this->createRequests($model);
-        $this->createController($model, $plural);
-        $this->updateWebRoutes($plural, $model);
+        if ($model === 'User') {
+            $this->createUserCrud($plural, $pluralUpper);
+        } else {
+            // Backend
+            $this->createModel($model);
+            $this->createMigration($timestamp, $plural, $model);
+            $this->createRequests($model);
+            $this->createController($model, $plural);
+            $this->updateWebRoutes($plural, $model);
 
-        // Frontend
-        $this->createTypeScriptTypes($model, $plural);
-        $this->createWayfinderRoutes($plural, $model);
-        $this->createIndexPage($model, $plural);
-        $this->updateTypeScriptIndex($plural);
-        $this->updateTypeScriptRoutesIndex($plural);
+            // Frontend
+            $this->createTypeScriptTypes($model, $plural);
+            $this->createWayfinderRoutes($plural, $model);
+            $this->createIndexPage($model, $plural);
+            $this->updateTypeScriptIndex($plural);
+            $this->updateTypeScriptRoutesIndex($plural);
+            $this->addSidebarNavigation($plural, $model, $pluralUpper);
+        }
 
         $this->info('Regenerating Wayfinder types...');
         $this->call('wayfinder:generate', ['--with-form' => true]);
@@ -53,11 +59,27 @@ class MakeCrudCommand extends Command
         }
     }
 
+    protected function createUserCrud(string $plural, string $pluralUpper): void
+    {
+        $this->createModel('User');
+        $this->createMigration(date('Y_m_d_His'), $plural, 'User');
+        $this->createUserRequests();
+        $this->createUserController($plural);
+        $this->updateWebRoutes($plural, 'User');
+        $this->createUserTypeScriptTypes($plural);
+        $this->createWayfinderRoutes($plural, 'User');
+        $this->createUserIndexPage($plural, $pluralUpper);
+        $this->updateTypeScriptIndex($plural);
+        $this->updateTypeScriptRoutesIndex($plural);
+        $this->addSidebarNavigation($plural, 'User', $pluralUpper);
+    }
+
     protected function createModel(string $model): void
     {
         $path = app_path("Models/{$model}.php");
         if (File::exists($path)) {
             $this->warn("Model already exists: {$path}");
+
             return;
         }
 
@@ -89,11 +111,13 @@ PHP;
         $path = database_path("migrations/{$timestamp}_create_{$plural}_table.php");
         if (File::exists($path)) {
             $this->warn("Migration already exists: {$path}");
+
             return;
         }
 
         if (Schema::hasTable($plural)) {
             $this->warn("Table '{$plural}' already exists in the database. Skipping migration creation.");
+
             return;
         }
 
@@ -135,7 +159,7 @@ PHP;
 
         // Store
         $storePath = "{$dir}/Store{$model}Request.php";
-        if (!File::exists($storePath)) {
+        if (! File::exists($storePath)) {
             File::put($storePath, <<<PHP
 <?php
 
@@ -164,7 +188,7 @@ PHP);
 
         // Update
         $updatePath = "{$dir}/Update{$model}Request.php";
-        if (!File::exists($updatePath)) {
+        if (! File::exists($updatePath)) {
             File::put($updatePath, <<<PHP
 <?php
 
@@ -200,6 +224,7 @@ PHP);
         $path = "{$dir}/{$model}Controller.php";
         if (File::exists($path)) {
             $this->warn("Controller already exists: {$path}");
+
             return;
         }
 
@@ -282,47 +307,54 @@ PHP;
     protected function updateWebRoutes(string $plural, string $model): void
     {
         $path = base_path('routes/web.php');
-        if (!File::exists($path)) {
-            $this->warn("routes/web.php not found.");
+        if (! File::exists($path)) {
+            $this->warn('routes/web.php not found.');
+
             return;
         }
 
         $content = File::get($path);
+
+        $param = $model === 'User' ? '{user}' : '{item}';
 
         $routeBlock = <<<PHP
 
 Route::middleware(['auth'])->group(function () {
     Route::get('{$plural}', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'index'])->name('{$plural}.index');
     Route::post('{$plural}', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'store'])->name('{$plural}.store');
-    Route::get('{$plural}/{{item}}/edit', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'edit'])->name('{$plural}.edit');
-    Route::patch('{$plural}/{{item}}', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'update'])->name('{$plural}.update');
-    Route::delete('{$plural}/{{item}}', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'destroy'])->name('{$plural}.destroy');
+    Route::get('{$plural}/{$param}/edit', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'edit'])->name('{$plural}.edit');
+    Route::patch('{$plural}/{$param}', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'update'])->name('{$plural}.update');
+    Route::delete('{$plural}/{$param}', [App\\Http\\Controllers\\{$model}s\\{$model}Controller::class, 'destroy'])->name('{$plural}.destroy');
 });
 
 PHP;
 
         if (Str::contains($content, "'{$plural}.index'")) {
             $this->warn("Routes for {$plural} already exist in routes/web.php.");
+
             return;
         }
 
         File::append($path, $routeBlock);
-        $this->info("Updated: routes/web.php");
+        $this->info('Updated: routes/web.php');
     }
 
     protected function createTypeScriptTypes(string $model, string $plural): void
     {
-        $dir = resource_path("js/types");
+        $dir = resource_path('js/types');
         File::ensureDirectoryExists($dir);
 
         $path = "{$dir}/{$plural}.ts";
         if (File::exists($path)) {
             $this->warn("TypeScript types already exist: {$path}");
+
             return;
         }
 
+        $typeName = $model === 'User' ? 'UserModel' : $model;
+
         $content = <<<TS
-export type {$model} = {
+export type {$typeName} = {
     id: number;
     name: string;
     description: string | null;
@@ -344,6 +376,7 @@ TS;
         $path = "{$dir}/index.ts";
         if (File::exists($path)) {
             $this->warn("Wayfinder routes already exist: {$path}");
+
             return;
         }
 
@@ -770,6 +803,7 @@ TS;
     protected function createIndexPage(string $model, string $plural): void
     {
         $pluralUpper = Str::of($plural)->ucfirst()->toString();
+        $typeName = $model === 'User' ? 'UserModel' : $model;
 
         $dir = resource_path("js/pages/{$plural}");
         File::ensureDirectoryExists($dir);
@@ -777,6 +811,7 @@ TS;
         $path = "{$dir}/Index.vue";
         if (File::exists($path)) {
             $this->warn("Page already exists: {$path}");
+
             return;
         }
 
@@ -809,30 +844,30 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { index, store, update, destroy } from '@/routes/{$plural}';
-import type { {$model} } from '@/types/{$plural}';
+import type { {$typeName} } from '@/types/{$plural}';
 
 type Props = {
-    items: {$model}[];
+    items: {$typeName}[];
 };
 
 defineProps<Props>();
 
 const open = ref(false);
-const editingItem = ref<{$model} | null>(null);
+const editingItem = ref<{$typeName} | null>(null);
 const deleteDialogOpen = ref(false);
-const itemToDelete = ref<{$model} | null>(null);
+const itemToDelete = ref<{$typeName} | null>(null);
 
 function openCreateSheet() {
     editingItem.value = null;
     open.value = true;
 }
 
-function openEditSheet(item: {$model}) {
+function openEditSheet(item: {$typeName}) {
     editingItem.value = item;
     open.value = true;
 }
 
-function confirmDelete(item: {$model}) {
+function confirmDelete(item: {$typeName}) {
     itemToDelete.value = item;
     deleteDialogOpen.value = true;
 }
@@ -860,12 +895,10 @@ function deleteItem() {
                 description="Manage your {$plural}"
             />
             <Sheet :open="open" @update:open="(v) => open = v">
-                <SheetTrigger as-child>
-                    <Button @click="openCreateSheet">
+                <Button @click="openCreateSheet">
                         <Plus class="h-4 w-4" />
                         New {$model}
                     </Button>
-                </SheetTrigger>
                 <SheetContent>
                     <SheetHeader>
                         <SheetTitle>{{ editingItem ? 'Edit' : 'Create' }} {$model}</SheetTitle>
@@ -973,8 +1006,8 @@ VUE;
 
     protected function updateTypeScriptIndex(string $plural): void
     {
-        $path = resource_path("js/types/index.ts");
-        if (!File::exists($path)) {
+        $path = resource_path('js/types/index.ts');
+        if (! File::exists($path)) {
             return;
         }
 
@@ -985,14 +1018,14 @@ VUE;
             return;
         }
 
-        File::append($path, PHP_EOL . $line);
+        File::append($path, PHP_EOL.$line);
         $this->info("Updated: {$path}");
     }
 
     protected function updateTypeScriptRoutesIndex(string $plural): void
     {
-        $path = resource_path("js/routes/index.ts");
-        if (!File::exists($path)) {
+        $path = resource_path('js/routes/index.ts');
+        if (! File::exists($path)) {
             return;
         }
 
@@ -1003,7 +1036,591 @@ VUE;
             return;
         }
 
-        File::append($path, PHP_EOL . $line);
+        File::append($path, PHP_EOL.$line);
         $this->info("Updated: {$path}");
+    }
+
+    protected function addSidebarNavigation(string $plural, string $model, string $pluralUpper): void
+    {
+        $path = resource_path('js/components/AppSidebar.vue');
+        if (! File::exists($path)) {
+            $this->warn("AppSidebar.vue not found at {$path}");
+
+            return;
+        }
+
+        $content = File::get($path);
+
+        if (! Str::contains($content, "'/{$plural}'")) {
+            $this->warn("Navigation item for {$plural} already exists in AppSidebar.vue");
+
+            return;
+        }
+
+        $icon = $model === 'User' ? 'Users' : 'FileText';
+        if (! Str::contains($content, $icon)) {
+            $content = str_replace(
+                "import { BookOpen, FolderGit2, LayoutGrid } from '@lucide/vue';",
+                "import { BookOpen, FolderGit2, LayoutGrid, {$icon} } from '@lucide/vue';",
+                $content
+            );
+        }
+
+        $routeImport = "import { index as {$plural}Index } from '@/routes/{$plural}';";
+        if (! Str::contains($content, $routeImport)) {
+            $content = str_replace(
+                "import type { NavItem } from '@/types';",
+                "import type { NavItem } from '@/types';\n{$routeImport}",
+                $content
+            );
+        }
+
+        $oldNav = "const mainNavItems = computed<NavItem[]>(() => [\n    {\n        title: 'Dashboard',\n        href: dashboardUrl.value,\n        icon: LayoutGrid,\n    },\n]);";
+        $newNav = "const mainNavItems = computed<NavItem[]>(() => [\n    {\n        title: 'Dashboard',\n        href: dashboardUrl.value,\n        icon: LayoutGrid,\n    },\n    {\n        title: '{$pluralUpper}',\n        href: {$plural}Index().url,\n        icon: {$icon},\n    },\n]);";
+        $content = str_replace($oldNav, $newNav, $content);
+
+        File::put($path, $content);
+        $this->info("Updated: {$path}");
+    }
+
+    protected function createUserRequests(): void
+    {
+        $dir = app_path('Http/Requests/Users');
+        File::ensureDirectoryExists($dir);
+
+        $storePath = "{$dir}/StoreUserRequest.php";
+        if (! File::exists($storePath)) {
+            File::put($storePath, <<<'PHP'
+<?php
+
+namespace App\Http\Requests\Users;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreUserRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role' => ['nullable', 'string', Rule::in(['admin', 'user'])],
+        ];
+    }
+}
+PHP);
+            $this->info("Created: {$storePath}");
+        }
+
+        $updatePath = "{$dir}/UpdateUserRequest.php";
+        if (! File::exists($updatePath)) {
+            File::put($updatePath, <<<'PHP'
+<?php
+
+namespace App\Http\Requests\Users;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class UpdateUserRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        $userId = $this->route('user');
+
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($userId)],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'role' => ['nullable', 'string', Rule::in(['admin', 'user'])],
+        ];
+    }
+}
+PHP);
+            $this->info("Created: {$updatePath}");
+        }
+    }
+
+    protected function createUserController(string $plural): void
+    {
+        $dir = app_path("Http/Controllers/{$plural}");
+        File::ensureDirectoryExists($dir);
+
+        $path = "{$dir}/UserController.php";
+        if (File::exists($path)) {
+            $this->warn("Controller already exists: {$path}");
+
+            return;
+        }
+
+        $content = <<<'PHP'
+<?php
+
+namespace App\Http\Controllers\Users;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Users\StoreUserRequest;
+use App\Http\Requests\Users\UpdateUserRequest;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class UserController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $users = User::query()
+            ->latest()
+            ->paginate(10)
+            ->through(function (User $user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role ?? 'user',
+                    'createdAt' => $user->created_at?->toISOString(),
+                    'updatedAt' => $user->updated_at?->toISOString(),
+                ];
+            });
+
+        return Inertia::render('users/Index', [
+            'items' => $users,
+        ]);
+    }
+
+    public function store(StoreUserRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        $data['password'] = bcrypt($data['password']);
+
+        User::create($data);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('User created.')]);
+
+        return to_route('users.index');
+    }
+
+    public function edit(Request $request, User $user): Response
+    {
+        return Inertia::render('users/Index', [
+            'item' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role ?? 'user',
+            ],
+        ]);
+    }
+
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    {
+        $data = $request->validated();
+
+        if (!empty($data['password'])) {
+            $data['password'] = bcrypt($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        $user->update($data);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('User updated.')]);
+
+        return to_route('users.index');
+    }
+
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        $user->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('User deleted.')]);
+
+        return to_route('users.index');
+    }
+}
+
+PHP;
+
+        File::put($path, $content);
+        $this->info("Created: {$path}");
+    }
+
+    protected function createUserTypeScriptTypes(string $plural): void
+    {
+        $dir = resource_path('js/types');
+        File::ensureDirectoryExists($dir);
+
+        $path = "{$dir}/{$plural}.ts";
+        if (File::exists($path)) {
+            $this->warn("TypeScript types already exist: {$path}");
+
+            return;
+        }
+
+        $content = <<<'TS'
+export type UserModel = {
+    id: number;
+    name: string;
+    email: string;
+    role: 'admin' | 'user';
+    createdAt: string;
+    updatedAt: string;
+};
+
+TS;
+
+        File::put($path, $content);
+        $this->info("Created: {$path}");
+    }
+
+    protected function createUserIndexPage(string $plural, string $pluralUpper): void
+    {
+        $dir = resource_path("js/pages/{$plural}");
+        File::ensureDirectoryExists($dir);
+
+        $path = "{$dir}/Index.vue";
+        if (File::exists($path)) {
+            $this->warn("Page already exists: {$path}");
+
+            return;
+        }
+
+        $content = <<<VUE
+<script setup lang="ts">
+import { Head, router } from '@inertiajs/vue3';
+import { Plus, Pencil, Trash, Shield } from '@lucide/vue';
+import { ref } from 'vue';
+import Heading from '@/components/Heading.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
+import { index, store, update, destroy } from '@/routes/{$plural}';
+import type { UserModel } from '@/types/{$plural}';
+
+type Props = {
+    items: {
+        data: UserModel[];
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
+    item?: UserModel;
+};
+
+defineProps<Props>();
+
+const open = ref(false);
+const editingItem = ref<UserModel | null>(props.item ?? null);
+const deleteDialogOpen = ref(false);
+const itemToDelete = ref<UserModel | null>(null);
+const assignRoleOpen = ref(false);
+const roleItem = ref<UserModel | null>(null);
+const selectedRole = ref<string>('user');
+
+function openCreateSheet() {
+    editingItem.value = null;
+    open.value = true;
+}
+
+function openEditSheet(item: UserModel) {
+    editingItem.value = item;
+    open.value = true;
+}
+
+function confirmDelete(item: UserModel) {
+    itemToDelete.value = item;
+    deleteDialogOpen.value = true;
+}
+
+function openAssignRole(item: UserModel) {
+    roleItem.value = item;
+    selectedRole.value = item.role;
+    assignRoleOpen.value = true;
+}
+
+function deleteItem() {
+    if (!itemToDelete.value) return;
+    router.delete(destroy(itemToDelete.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            deleteDialogOpen.value = false;
+            itemToDelete.value = null;
+        },
+    });
+}
+
+function assignRole() {
+    if (!roleItem.value) return;
+    router.patch(update(roleItem.value.id), { role: selectedRole.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            assignRoleOpen.value = false;
+            roleItem.value = null;
+        },
+    });
+}
+</script>
+
+<template>
+    <Head title="{$pluralUpper}" />
+
+    <div class="flex flex-col space-y-6">
+        <div class="flex items-center justify-between">
+            <Heading
+                variant="small"
+                title="{$pluralUpper}"
+                description="Manage users and their roles"
+            />
+            <Sheet :open="open" @update:open="(v) => open = v">
+                <Button @click="openCreateSheet">
+                        <Plus class="h-4 w-4" />
+                        New User
+                    </Button>
+                <SheetContent>
+                    <SheetHeader>
+                        <SheetTitle>{{ editingItem ? 'Edit' : 'Create' }} User</SheetTitle>
+                        <SheetDescription>
+                            {{ editingItem ? 'Update' : 'Create a new' }} user account.
+                        </SheetDescription>
+                    </SheetHeader>
+                    <Form
+                        :key="editingItem?.id ?? 'create'"
+                        v-bind="editingItem ? update.form(editingItem.id) : store.form()"
+                        class="space-y-6 px-4"
+                        v-slot="{ errors, processing }"
+                        @success="open = false; editingItem = null;"
+                    >
+                        <div class="grid gap-2">
+                            <Label for="name">Name</Label>
+                            <Input
+                                id="name"
+                                name="name"
+                                :default-value="editingItem?.name"
+                                placeholder="Full name"
+                                required
+                            />
+                            <InputError :message="errors.name" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="email">Email</Label>
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                :default-value="editingItem?.email"
+                                placeholder="email@example.com"
+                                required
+                            />
+                            <InputError :message="errors.email" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="password">Password</Label>
+                            <Input
+                                id="password"
+                                name="password"
+                                type="password"
+                                :placeholder="editingItem ? 'Leave blank to keep current' : 'Password'"
+                                :required="!editingItem"
+                            />
+                            <InputError :message="errors.password" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="password_confirmation">Confirm Password</Label>
+                            <Input
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                type="password"
+                                :required="!editingItem"
+                            />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="role">Role</Label>
+                            <Select name="role" :default-value="editingItem?.role ?? 'user'">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="user">User</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <InputError :message="errors.role" />
+                        </div>
+                        <SheetFooter>
+                            <SheetClose as-child>
+                                <Button variant="secondary">Cancel</Button>
+                            </SheetClose>
+                            <Button type="submit" :disabled="processing">
+                                {{ editingItem ? 'Update' : 'Create' }}
+                            </Button>
+                        </SheetFooter>
+                    </Form>
+                </SheetContent>
+            </Sheet>
+
+            <Dialog :open="deleteDialogOpen" @update:open="(v) => deleteDialogOpen = v">
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete User</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{{ itemToDelete?.name }}"? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter class="gap-2">
+                        <DialogClose as-child>
+                            <Button variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button variant="destructive" @click="deleteItem">
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog :open="assignRoleOpen" @update:open="(v) => assignRoleOpen = v">
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Assign Role</DialogTitle>
+                        <DialogDescription>
+                            Change the role for "{{ roleItem?.name }}".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div class="grid gap-2 py-4">
+                        <Label>Role</Label>
+                        <Select v-model="selectedRole">
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter class="gap-2">
+                        <DialogClose as-child>
+                            <Button variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button @click="assignRole">
+                            Save Role
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+
+        <div class="rounded-md border">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-muted/50">
+                    <tr>
+                        <th class="px-4 py-3 font-medium">Name</th>
+                        <th class="px-4 py-3 font-medium">Email</th>
+                        <th class="px-4 py-3 font-medium">Role</th>
+                        <th class="px-4 py-3 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in items.data" :key="item.id" class="border-t">
+                        <td class="px-4 py-3">{{ item.name }}</td>
+                        <td class="px-4 py-3">{{ item.email }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold" :class="item.role === 'admin' ? 'border-transparent bg-primary text-primary-foreground' : 'border-transparent bg-secondary text-secondary-foreground'">
+                                {{ item.role }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <Button variant="ghost" size="sm" @click="openEditSheet(item)">
+                                    <Pencil class="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" @click="openAssignRole(item)">
+                                    <Shield class="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" @click="confirmDelete(item)">
+                                    <Trash class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr v-if="!items.data.length">
+                        <td colspan="4" class="px-4 py-8 text-center text-muted-foreground">
+                            No users found.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div v-if="items.last_page > 1" class="flex items-center justify-between">
+            <div class="text-sm text-muted-foreground">
+                Showing {{ items.from }} to {{ items.to }} of {{ items.total }} results.
+            </div>
+            <div class="flex items-center gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="items.current_page === 1"
+                    @click="router.get(index().url, { page: items.current_page - 1 })"
+                >
+                    Previous
+                </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :disabled="items.current_page === items.last_page"
+                    @click="router.get(index().url, { page: items.current_page + 1 })"
+                >
+                    Next
+                </Button>
+            </div>
+        </div>
+    </div>
+</template>
+
+VUE;
+
+        File::put($path, $content);
+        $this->info("Created: {$path}");
     }
 }

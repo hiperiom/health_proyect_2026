@@ -2,20 +2,35 @@
 
 namespace App\Http\Responses;
 
-use App\Http\Responses\Concerns\RedirectsToCurrentTeam;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\URL;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
-use Laravel\Fortify\Fortify;
 use Symfony\Component\HttpFoundation\Response;
 
 class RegisterResponse implements RegisterResponseContract
 {
-    use RedirectsToCurrentTeam;
-
     public function toResponse($request): Response
     {
-        return $request->wantsJson()
-            ? new JsonResponse(['two_factor' => false], 201)
-            : redirect()->intended($this->redirectPathForCurrentTeam($request, Fortify::redirects('register')));
+        if ($request->wantsJson()) {
+            return new JsonResponse(['two_factor' => false], 201);
+        }
+
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($user && ! $user->password_updated) {
+            return redirect()->route('password.force-update');
+        }
+
+        $team = $user?->currentTeam ?? $user?->personalTeam();
+
+        if ($team) {
+            URL::defaults(['current_team' => $team->slug]);
+
+            return redirect("/{$team->slug}/dashboard");
+        }
+
+        return redirect('/');
     }
 }
