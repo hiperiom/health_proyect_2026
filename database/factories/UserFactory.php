@@ -2,8 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\TeamRole;
-use App\Models\Team;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -30,7 +29,7 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password' => static::$password ??= Hash::make('12345678'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -39,21 +38,105 @@ class UserFactory extends Factory
     }
 
     /**
-     * Configure the model factory.
+     * Create the user with the "Superusuario" role assigned.
      */
-    public function configure(): static
+    public function superusuario(): static
     {
-        return $this->afterCreating(function ($user) {
-            $team = Team::factory()->personal()->create([
-                'name' => $user->name."'s Team",
-            ]);
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'superusuario'],
+                ['name' => 'Superusuario']
+            );
+            $user->roles()->sync([$role->id]);
+        })->state(fn (): array => [
+            'name' => 'Superusuario',
+            'email' => 'superusuario@test.com',
+        ]);
+    }
 
-            $team->members()->attach($user, [
-                'role' => TeamRole::Owner->value,
-            ]);
+    /**
+     * Create the user with the "Paciente" role assigned.
+     */
+    public function paciente(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'paciente'],
+                ['name' => 'Paciente']
+            );
+            $user->roles()->sync([$role->id]);
+        })->state(fn (): array => [
+            'name' => 'Paciente',
+            'email' => 'paciente@test.com',
+        ]);
+    }
 
-            $user->switchTeam($team);
-        });
+    /**
+     * Create the user with the "Doctor" role assigned.
+     */
+    public function doctor(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'doctor'],
+                ['name' => 'Doctor']
+            );
+            $user->roles()->sync([$role->id]);
+        })->state(fn (): array => [
+            'name' => 'Doctor',
+            'email' => 'doctor@test.com',
+        ]);
+    }
+
+    /**
+     * Create the user with the "Administrador" role assigned.
+     */
+    public function administrador(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'administrador'],
+                ['name' => 'Administrador']
+            );
+            $user->roles()->sync([$role->id]);
+        })->state(fn (): array => [
+            'name' => 'Administrador',
+            'email' => 'admin@test.com',
+        ]);
+    }
+
+    /**
+     * Create the user with the "Enfermería" role assigned.
+     */
+    public function enfermeria(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'enfermeria'],
+                ['name' => 'Enfermería']
+            );
+            $user->roles()->sync([$role->id]);
+        })->state(fn (): array => [
+            'name' => 'Enfermería',
+            'email' => 'enfermeria@test.com',
+        ]);
+    }
+
+    /**
+     * Create the user with the "Asistencial" role assigned.
+     */
+    public function asistencial(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'asistencial'],
+                ['name' => 'Asistencial']
+            );
+            $user->roles()->sync([$role->id]);
+        })->state(fn (): array => [
+            'name' => 'Asistencial',
+            'email' => 'asistencial@test.com',
+        ]);
     }
 
     /**

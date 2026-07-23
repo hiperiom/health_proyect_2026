@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Users;
 
-use App\Actions\Teams\CreateTeam;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\UserCreatedTemporaryPassword;
 use Illuminate\Http\RedirectResponse;
@@ -17,12 +18,6 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function __construct(
-        private readonly CreateTeam $createTeam,
-    ) {
-        //
-    }
-
     public function index(Request $request): Response
     {
         $search = trim((string) $request->query('search', ''));
@@ -34,6 +29,7 @@ class UserController extends Controller
         }
 
         $users = User::query()
+            ->with('roles:id,slug,name')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $like = '%'.$search.'%';
@@ -41,18 +37,23 @@ class UserController extends Controller
                         ->orWhere('email', 'like', $like);
                 });
             })
-            ->when(in_array($role, ['admin', 'user'], true), function ($query) use ($role) {
-                $query->where('role', $role);
+            ->when(in_array($role, UserRole::slugs(), true), function ($query) use ($role) {
+                $query->whereHas('roles', function ($q) use ($role) {
+                    $q->where('slug', $role);
+                });
             })
             ->latest()
             ->paginate($perPage)
             ->withQueryString()
             ->through(function (User $user) {
+                $primaryRole = $user->roles->first();
+
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'role' => $user->role ?? 'user',
+                    'role' => $primaryRole?->slug,
+                    'roleName' => $primaryRole?->name,
                     'passwordUpdated' => $user->password_updated,
                     'createdAt' => $user->created_at?->toISOString(),
                     'updatedAt' => $user->updated_at?->toISOString(),
@@ -61,6 +62,7 @@ class UserController extends Controller
 
         return Inertia::render('users/Index', [
             'items' => $users,
+            'availableRoles' => $this->availableRoles(),
             'filters' => [
                 'search' => $search,
                 'role' => $role,
@@ -75,11 +77,14 @@ class UserController extends Controller
         $temporaryPassword = Str::password(16);
         $data['password'] = $temporaryPassword;
         $data['password_updated'] = false;
+        $roleSlug = $data['role'];
+        unset($data['role']);
 
-        $user = DB::transaction(function () use ($data) {
+        $user = DB::transaction(function () use ($data, $roleSlug) {
             $user = User::create($data);
 
-            $this->createTeam->handle($user, $user->name."'s Team", isPersonal: true);
+            $role = Role::query()->where('slug', $roleSlug)->firstOrFail();
+            $user->roles()->attach($role->id);
 
             return $user;
         });
@@ -94,27 +99,39 @@ class UserController extends Controller
 
     public function edit(Request $request, User $user): Response
     {
+        $user->load('roles:id,slug,name');
+
         return Inertia::render('users/Index', [
             'item' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role ?? 'user',
+                'role' => $user->roles->first()?->slug,
             ],
+            'availableRoles' => $this->availableRoles(),
         ]);
     }
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $data = $request->validated();
+        $roleSlug = $data['role'] ?? null;
+        unset($data['role']);
 
-        if (! empty($data['password'])) {
-            $data['password'] = bcrypt($data['password']);
-        } else {
-            unset($data['password']);
-        }
+        DB::transaction(function () use ($user, $data, $roleSlug) {
+            if (! empty($data['password'])) {
+                $data['password'] = bcrypt($data['password']);
+            } else {
+                unset($data['password']);
+            }
 
-        $user->update($data);
+            $user->update($data);
+
+            if ($roleSlug !== null) {
+                $role = Role::query()->where('slug', $roleSlug)->firstOrFail();
+                $user->roles()->sync([$role->id]);
+            }
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User updated.')]);
 
@@ -144,5 +161,16 @@ class UserController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User deleted.')]);
 
         return to_route('users.index');
+    }
+
+    /** @return array<int, array{value: string, label: string}> */
+    private function availableRoles(): array
+    {
+        return collect(UserRole::cases())
+            ->map(fn (UserRole $role): array => [
+                'value' => $role->value,
+                'label' => $role->label(),
+            ])
+            ->all();
     }
 }

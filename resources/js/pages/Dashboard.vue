@@ -1,22 +1,14 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import PendingInvitationsModal from '@/components/PendingInvitationsModal.vue';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
 import { dashboard } from '@/routes';
-import type { DashboardInvitation, Team } from '@/types';
-
-defineProps<{
-    pendingInvitations?: DashboardInvitation[];
-}>();
 
 defineOptions({
-    layout: (props: { currentTeam?: Team | null }) => ({
+    layout: () => ({
         breadcrumbs: [
             {
                 title: 'Dashboard',
-                href: props.currentTeam
-                    ? dashboard(props.currentTeam.slug)
-                    : '/',
+                href: dashboard().url,
             },
         ],
     }),
@@ -25,11 +17,6 @@ defineOptions({
 
 <template>
     <Head title="Dashboard" />
-
-    <PendingInvitationsModal
-        v-if="pendingInvitations && pendingInvitations.length > 0"
-        :invitations="pendingInvitations"
-    />
 
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"

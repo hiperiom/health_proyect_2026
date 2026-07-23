@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3';
-import { CircleCheck, Key, MoreVertical, Pencil, Search, Shield, Trash } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { CircleCheck, Key, MoreVertical, Pencil, Plus, Search, Shield, Trash } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     Sheet,
+    SheetClose,
     SheetContent,
     SheetDescription,
     SheetFooter,
@@ -40,7 +41,7 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { index, store, update, destroy, resetPassword as resetPasswordRoute } from '@/routes/users';
-import type { UserModel } from '@/types/users';
+import type { RoleOption, UserModel } from '@/types/users';
 
 const page = usePage();
 const temporaryPassword = ref<string | null>(null);
@@ -62,6 +63,7 @@ type Props = {
         to: number;
     };
     item?: UserModel;
+    availableRoles?: RoleOption[];
     filters?: {
         search?: string;
         role?: string;
@@ -69,7 +71,11 @@ type Props = {
     };
 };
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    availableRoles: () => [],
+});
+
+const availableRoles = computed<RoleOption[]>(() => props.availableRoles);
 
 const open = ref(false);
 const editingItem = ref<UserModel | null>(props.item ?? null);
@@ -79,7 +85,7 @@ const resetDialogOpen = ref(false);
 const itemToReset = ref<UserModel | null>(null);
 const assignRoleOpen = ref(false);
 const roleItem = ref<UserModel | null>(null);
-const selectedRole = ref<string>('user');
+const selectedRole = ref<string>(availableRoles.value[0]?.value ?? '');
 const roleError = ref<string | null>(null);
 const search = ref<string>(props.filters?.search ?? '');
 const roleFilter = ref<string>(props.filters?.role && props.filters.role !== '' ? props.filters.role : 'all');
@@ -145,7 +151,7 @@ function confirmResetPassword(item: UserModel) {
 
 function openAssignRole(item: UserModel) {
     roleItem.value = item;
-    selectedRole.value = item.role;
+    selectedRole.value = item.role ?? availableRoles.value[0]?.value ?? '';
     assignRoleOpen.value = true;
 }
 
@@ -190,6 +196,14 @@ function assignRole() {
         },
     });
 }
+
+function roleLabel(slug: string | null | undefined): string {
+    if (!slug) {
+        return '—';
+    }
+
+    return availableRoles.value.find((role: RoleOption) => role.value === slug)?.label ?? slug;
+}
 </script>
 
 <template>
@@ -218,8 +232,13 @@ function assignRole() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All roles</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem
+                            v-for="role in availableRoles"
+                            :key="role.value"
+                            :value="role.value"
+                        >
+                            {{ role.label }}
+                        </SelectItem>
                     </SelectContent>
                 </Select>
                 <Sheet v-model:open="open">
@@ -268,13 +287,21 @@ function assignRole() {
                             </div>
                             <div class="grid gap-2">
                                 <Label for="role">Role</Label>
-                                <Select name="role" :default-value="editingItem?.role ?? 'user'">
+                                <Select
+                                    name="role"
+                                    :default-value="editingItem?.role ?? availableRoles[0]?.value ?? ''"
+                                >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select role" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="user">User</SelectItem>
-                                        <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem
+                                            v-for="role in availableRoles"
+                                            :key="role.value"
+                                            :value="role.value"
+                                        >
+                                            {{ role.label }}
+                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <InputError :message="errors.role" />
@@ -346,8 +373,13 @@ function assignRole() {
                             <SelectValue placeholder="Select role" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem
+                                v-for="role in availableRoles"
+                                :key="role.value"
+                                :value="role.value"
+                            >
+                                {{ role.label }}
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                     <InputError :message="roleError ?? undefined" />
@@ -394,8 +426,11 @@ function assignRole() {
                         <td class="px-4 py-3">{{ item.name }}</td>
                         <td class="px-4 py-3">{{ item.email }}</td>
                         <td class="px-4 py-3">
-                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold" :class="item.role === 'admin' ? 'border-transparent bg-primary text-primary-foreground' : 'border-transparent bg-secondary text-secondary-foreground'">
-                                {{ item.role }}
+                            <span
+                                class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                                :class="item.role === 'administrador' || item.role === 'superusuario' ? 'border-transparent bg-primary text-primary-foreground' : 'border-transparent bg-secondary text-secondary-foreground'"
+                            >
+                                {{ roleLabel(item.role) }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-right">
