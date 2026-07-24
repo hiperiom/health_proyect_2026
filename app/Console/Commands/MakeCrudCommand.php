@@ -3,13 +3,14 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MakeCrudCommand extends Command
 {
-    protected $signature = 'make:crud {name : The singular model name (PascalCase)} {--migrate : Run the migration after generating files}';
+    protected $signature = 'make:crud {name : The singular model name (PascalCase)} {--migrate : Run the migration after generating files} {--test : Run backend tests and frontend build after generating files} {--skip-test : Skip running tests (overrides --test)}';
 
     protected $description = 'Generate a full CRUD (backend + frontend Inertia/Vue) for the given model';
 
@@ -23,35 +24,116 @@ class MakeCrudCommand extends Command
             return;
         }
 
+        // Abort early if the module is already registered, to avoid creating
+        // duplicate/broken files for an existing CRUD.
+        if (Schema::hasTable('modules') && DB::table('modules')->where('name', $model)->exists()) {
+            $this->error("Module '{$model}' already exists in the modules table. Aborting to avoid overwriting existing CRUD.");
+
+            return;
+        }
+
         $plural = Str::of($model)->plural()->lower()->toString();
         $pluralUpper = Str::of($plural)->ucfirst()->toString();
         $timestamp = date('Y_m_d_His');
 
         $this->info("Generating CRUD for: {$model} ({$plural})");
 
-            // Backend
-            $this->createModel($model);
-            $this->createMigration($timestamp, $plural, $model);
-            $this->createRequests($model);
-            $this->createController($model, $plural);
-            $this->updateWebRoutes($plural, $model);
+        // Backend
+        $this->createModel($model);
+        $this->createMigration($timestamp, $plural, $model);
+        $this->createRequests($model);
+        $this->createController($model, $plural);
+        $this->updateWebRoutes($plural, $model);
 
-            // Frontend
-            $this->createTypeScriptTypes($model, $plural);
-            $this->createWayfinderRoutes($plural, $model);
-            $this->createIndexPage($model, $plural);
-            $this->updateTypeScriptIndex($plural);
-            $this->updateTypeScriptRoutesIndex($plural);
-            $this->addSidebarNavigation($plural, $model, $pluralUpper);
+        // Frontend
+        $this->createTypeScriptTypes($model, $plural);
+        $this->createWayfinderRoutes($plural, $model);
+        $this->createIndexPage($model, $plural);
+        $this->updateTypeScriptIndex($plural);
+        $this->updateTypeScriptRoutesIndex($plural);
+        $this->addSidebarNavigation($plural, $model, $pluralUpper);
 
         $this->info('Regenerating Wayfinder types...');
         $this->call('wayfinder:generate', ['--with-form' => true]);
 
         $this->info('CRUD generated successfully!');
 
+        // Register the module itself so it shows up in the modules table.
+        if (Schema::hasTable('modules') && ! DB::table('modules')->where('name', $model)->exists()) {
+            $now = now();
+            DB::table('modules')->insert([
+                'name' => $model,
+                'description' => 'Manage '.Str::of($model)->plural()->lower()->toString(),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $this->info("Registered module: {$model}");
+        }
+
+        // Run backend tests + frontend build if requested.
+        $this->runTestsForModule($model);
+
         if ($this->option('migrate')) {
             $this->info('Running migration...');
             $this->call('migrate');
+        }
+    }
+
+    /**
+     * Run backend tests (Pest) and frontend build (npm) to validate the generated module.
+     *
+     * Only runs if the --test flag is set and --skip-test is not set.
+     * Reports results without aborting the command.
+     */
+    protected function runTestsForModule(string $model): void
+    {
+        if ($this->option('skip-test')) {
+            $this->warn('Skipping tests (--skip-test).');
+
+            return;
+        }
+
+        if (! $this->option('test')) {
+            return;
+        }
+
+        $this->info("Running backend tests for {$model}...");
+        // Invoke Pest v4 directly via the vendor binary. This avoids ambiguity with
+        // PHPUnit's --test-suffix, --testdox, --testsuite options in Artisan's 'test' command,
+        // and matches Pest's expected invocation pattern: ./vendor/bin/pest --filter=<pattern>.
+        $output = [];
+        $exitCode = 0;
+        $pest = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? base_path('vendor\bin\pest.bat') : base_path('vendor/bin/pest');
+        if (file_exists($pest)) {
+            exec('php "'.$pest.'" --filter='.$model.' 2>&1', $output, $exitCode);
+        } else {
+            // Fallback: try pest:test with positional argument.
+            exec('php '.base_path('artisan').' pest:test --compact '.$model.' 2>&1', $output, $exitCode);
+        }
+        foreach ($output as $line) {
+            $this->line($line);
+        }
+
+        if ($exitCode !== 0) {
+            $this->error("Backend tests for {$model} reported failures (exit code: {$exitCode}).");
+        } else {
+            $this->info("Backend tests for {$model} passed.");
+        }
+
+        if (file_exists(base_path('package.json'))) {
+            $this->info('Running frontend build (npm run build)...');
+            $output = [];
+            $code = 0;
+            $npm = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'npm.cmd' : 'npm';
+            exec($npm.' run build 2>&1', $output, $code);
+            if ($code !== 0) {
+                $this->error('Frontend build failed:');
+                foreach ($output as $line) {
+                    $this->line($line);
+                }
+            } else {
+                $this->info('Frontend build succeeded.');
+            }
         }
     }
 

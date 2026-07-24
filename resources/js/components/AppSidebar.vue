@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, FileText } from '@lucide/vue';
+import {
+    BookOpen,
+    Boxes,
+    FileText,
+    FolderGit2,
+    Key,
+    LayoutGrid,
+    Shield,
+    Stethoscope,
+    Users,
+} from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -16,25 +26,138 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { index as medicalespecialtiesIndex } from '@/routes/medicalespecialties';
+import { index as modulesIndex } from '@/routes/modules';
+import { index as patientsIndex } from '@/routes/patients';
+import { index as permissionsIndex } from '@/routes/permissions';
+import { index as rolesIndex } from '@/routes/roles';
 import { index as usersIndex } from '@/routes/users';
+import type { NavItem } from '@/types';
 
-const page = usePage();
+type AuthUser = {
+    id: number;
+    name: string;
+    email: string;
+    role: string | null;
+    roleName: string | null;
+    permissions: string[];
+};
+
+type PageProps = {
+    auth: {
+        user: AuthUser | null;
+    };
+};
+
+const page = usePage<PageProps>();
 
 const dashboardUrl = computed(() => dashboard().url);
 
-const mainNavItems = computed<NavItem[]>(() => [
-    {
-        title: 'Dashboard',
-        href: dashboardUrl.value,
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Users',
-        href: usersIndex().url,
-        icon: FileText,
-    },
-]);
+const userPermissions = computed<string[]>(
+    () => page.props.auth.user?.permissions ?? [],
+);
+
+const isSuperuser = computed<boolean>(
+    () => page.props.auth.user?.role === 'superusuario',
+);
+
+const canUsers = computed<boolean>(
+    () =>
+        isSuperuser.value ||
+        userPermissions.value.some((slug) => slug.startsWith('users.')),
+);
+
+const canRoles = computed<boolean>(
+    () =>
+        isSuperuser.value ||
+        userPermissions.value.some((slug) => slug.startsWith('roles.')),
+);
+
+const canPermissions = computed<boolean>(
+    () =>
+        isSuperuser.value ||
+        userPermissions.value.some((slug) => slug.startsWith('permissions.')),
+);
+
+const canModules = computed<boolean>(
+    () =>
+        isSuperuser.value ||
+        userPermissions.value.some((slug) => slug.startsWith('modules.')),
+);
+
+const canMedicalEspecialties = computed<boolean>(
+    () =>
+        isSuperuser.value ||
+        userPermissions.value.some((slug) =>
+            slug.startsWith('medicalespecialties.'),
+        ),
+);
+
+const canPatients = computed<boolean>(
+    () =>
+        isSuperuser.value ||
+        userPermissions.value.some((slug) => slug.startsWith('patients.')),
+);
+
+const mainNavItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [
+        {
+            title: 'Dashboard',
+            href: dashboardUrl.value,
+            icon: LayoutGrid,
+        },
+    ];
+
+    if (canUsers.value) {
+        items.push({
+            title: 'Users',
+            href: usersIndex().url,
+            icon: Key,
+        });
+    }
+
+    if (canRoles.value) {
+        items.push({
+            title: 'Roles',
+            href: rolesIndex().url,
+            icon: Shield,
+        });
+    }
+
+    if (canPermissions.value) {
+        items.push({
+            title: 'Permissions',
+            href: permissionsIndex().url,
+            icon: FileText,
+        });
+    }
+
+    if (canModules.value) {
+        items.push({
+            title: 'Modules',
+            href: modulesIndex().url,
+            icon: Boxes,
+        });
+    }
+
+    if (canMedicalEspecialties.value) {
+        items.push({
+            title: 'Medical Specialties',
+            href: medicalespecialtiesIndex().url,
+            icon: Stethoscope,
+        });
+    }
+
+    if (canPatients.value) {
+        items.push({
+            title: 'Patients',
+            href: patientsIndex().url,
+            icon: Users,
+        });
+    }
+
+    return items;
+});
 
 const footerNavItems: NavItem[] = [
     {

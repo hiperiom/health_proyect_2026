@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -48,6 +49,12 @@ class UserFactory extends Factory
                 ['name' => 'Superusuario']
             );
             $user->roles()->sync([$role->id]);
+
+            // Superusuario gets all available permissions
+            $permissionIds = Permission::query()->pluck('id')->all();
+            if (! empty($permissionIds)) {
+                $user->permissions()->sync($permissionIds);
+            }
         })->state(fn (): array => [
             'name' => 'Superusuario',
             'email' => 'superusuario@test.com',

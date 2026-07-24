@@ -29,6 +29,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Role> $roles
+ * @property-read Collection<int, Permission> $permissions
  */
 #[Fillable(['name', 'email', 'password', 'password_updated'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -64,10 +65,38 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * The permissions assigned directly to the user.
+     *
+     * @return BelongsToMany<Permission>
+     */
+    public function permissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'users_permissions')
+            ->withTimestamps();
+    }
+
+    /**
      * Get the user's primary role (the only role, if any).
      */
     public function primaryRole(): ?Role
     {
         return $this->roles()->first();
+    }
+
+    /**
+     * Get the list of permission slugs available to the user.
+     *
+     * - Superusuario gets every permission in the system.
+     * - All other users get the slugs of their directly assigned permissions.
+     *
+     * @return array<int, string>
+     */
+    public function permissionSlugs(): array
+    {
+        if ($this->primaryRole()?->slug === 'superusuario') {
+            return Permission::query()->pluck('slug')->all();
+        }
+
+        return $this->permissions()->pluck('slug')->all();
     }
 }

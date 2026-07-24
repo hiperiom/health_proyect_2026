@@ -18,8 +18,11 @@ defineOptions({
 <template>
     <Head title="Update Password" />
 
-    <div class="mb-4 rounded-md bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-        Your account was created with a temporary password. Please set a new password to continue.
+    <div
+        class="mb-4 rounded-md bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+    >
+        Your account was created with a temporary password. Please set a new
+        password to continue.
     </div>
 
     <Form
