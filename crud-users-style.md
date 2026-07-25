@@ -20,6 +20,41 @@
 
 ---
 
+## 0.1. Flujo de ramas Git (obligatorio)
+
+- Cada nuevo módulo CRUD debe desarrollarse en una rama feature dedicada.
+- Nombre de rama: `feature-{module}` donde `{module}` es el nombre del módulo en kebab-case (ej. `feature-medical-specialties`).
+- Antes de crear la rama, asegurarse de que `main` esté actualizada: `git pull origin main`.
+- Crear la rama desde `main`: `git checkout -b feature-{module}`.
+- Al finalizar, hacer push y merge a `main` una vez superados los checks.
+
+## 0.2. Trigger rama `new-refactor`
+
+- Si el usuario escribe la frase exacta **`nuevo refactor`**, crear inmediatamente la rama:
+  ```bash
+  git checkout -b new-refactor
+  ```
+
+- Esta rama se usa para trabajo de refactor general sin relación con un módulo CRUD específico.
+
+## 0.3. Trigger merge "finalizar refactor"
+
+- Si el usuario escribe la frase exacta **`finalizar refactor`**, ejecutar el merge de la rama actual contra `main`:
+  ```bash
+  git checkout main && git merge ...
+  ```
+
+- No crear, eliminar ni renombrar ramas en este paso; solo fusionar la rama activa en `main`.
+
+## 0.4. Trigger rama `nuevo fix`
+
+- Si el usuario escribe la frase exacta **`nuevo fix`**, crear inmediatamente una rama con prefijo `fix/` y un identificador breve descriptivo del problema, por ejemplo `fix/login-redirect` o `fix/patient-phone-layout`.
+- Comando:
+  ```bash
+  git checkout -b fix/{identificador-breve}
+  ```
+- Después de crear la rama, cambiar el contexto de trabajo a esa rama antes de continuar con cualquier otra acción.
+
 ## 1. Estructura de carpetas (no crear carpetas nuevas, usar las existentes)
 
 ```

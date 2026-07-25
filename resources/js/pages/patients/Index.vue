@@ -862,7 +862,6 @@ void computed;
                 <thead class="bg-muted/50">
                     <tr>
                         <th class="px-4 py-3 font-medium">Paciente</th>
-                        <th class="px-4 py-3 font-medium">Teléfono</th>
                         <th class="px-4 py-3 font-medium">Estado</th>
                         <th class="px-4 py-3 text-right font-medium">
                             Acciones
@@ -898,12 +897,11 @@ void computed;
                                         {{ age(item.birthDate) }} años
                                         <span class="mx-1">&middot;</span>
                                         {{ item.genderLabel ?? item.gender }}
+                                        <span class="mx-1">&middot;</span>
+                                        {{ item.phoneMobile }}
                                     </span>
                                 </div>
                             </div>
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ item.phoneMobile }}
                         </td>
                         <td class="px-4 py-3">
                             <span
