@@ -88,6 +88,16 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * The patient record linked to this user account through `user_id`.
+     *
+     * @return HasMany<Patients>
+     */
+    public function patient(): HasMany
+    {
+        return $this->hasMany(Patients::class, 'user_id');
+    }
+
+    /**
      * Get the user's primary role (the only role, if any).
      */
     public function primaryRole(): ?Role
@@ -117,7 +127,7 @@ class User extends Authenticatable implements PasskeyUser
      * domain tables that justify the given role.
      *
      * For the `paciente` role, the user is considered to "own" a patient
-     * record if they appear as the creator of any `Patients` row.
+     * record if they are linked through `patients.user_id`.
      *
      * For staff roles (`doctor`, `enfermeria`, `asistencial`) we currently
      * do not have dedicated domain tables, so we fall back to the same
@@ -132,7 +142,8 @@ class User extends Authenticatable implements PasskeyUser
     public function hasDomainRecordForRole(string $roleSlug): bool
     {
         return match ($roleSlug) {
-            'paciente', 'doctor', 'enfermeria', 'asistencial' => $this->createdPatients()->exists(),
+            'paciente' => $this->patient()->exists(),
+            'doctor', 'enfermeria', 'asistencial' => $this->createdPatients()->exists(),
             'superusuario', 'administrador' => true,
             default => false,
         };
