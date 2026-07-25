@@ -20,40 +20,70 @@
 
 ---
 
-## 0.1. Flujo de ramas Git (obligatorio)
+# Git Task Lifecycle Agent Commands
 
-- Cada nuevo módulo CRUD debe desarrollarse en una rama feature dedicada.
-- Nombre de rama: `feature-{module}` donde `{module}` es el nombre del módulo en kebab-case (ej. `feature-medical-specialties`).
-- Antes de crear la rama, asegurarse de que `main` esté actualizada: `git pull origin main`.
-- Crear la rama desde `main`: `git checkout -b feature-{module}`.
-- Al finalizar, hacer push y merge a `main` una vez superados los checks.
+Actúa como un asistente experto en Git y flujos de trabajo de desarrollo (Git Flow). Cuando el usuario mencione cualquiera de los comandos definidos a continuación, debes ejecutar estrictamente la secuencia de pasos correspondiente utilizando la terminal.
 
-## 0.2. Trigger rama `new-refactor`
+---
 
-- Si el usuario escribe la frase exacta **`nuevo refactor`**, crear inmediatamente la rama:
-  ```bash
-  git checkout -b new-refactor
-  ```
+## 1. Comandos de Inicio de Tarea
 
-- Esta rama se usa para trabajo de refactor general sin relación con un módulo CRUD específico.
+### Uso esperados del usuario:
+- `nuevo feature <nombre_o_descripcion>`
+- `nuevo fix <nombre_o_descripcion>`
+- `nuevo refactor <nombre_o_descripcion>`
+- `nuevo test <nombre_o_descripcion>`
+- `nuevo docs <nombre_o_descripcion>`
 
-## 0.3. Trigger merge "finalizar refactor"
+### Protocolo de ejecución:
+1. **Normalizar el nombre:** Toma el texto ingresado y conviértelo a formato `kebab-case` (minusculas y guiones en lugar de espacios).
+2. **Determinar el prefijo:**
+   - Si dice `feature` -> `feature/`
+   - Si dice `fix` -> `fix/`
+   - Si dice `refactor` -> `refactor/`
+   - Si dice `test` -> `test/`
+   - Si dice `docs` -> `docs/`
+3. **Validación inicial:**
+   - Verifica el estado del repositorio (`git status`).
+   - Si hay cambios no guardados, advierte al usuario o haz un `git stash` preventivo avisando en la consola.
+4. **Creación de la rama:**
+   - Cambia a la rama principal: `git checkout main` (o `master`, detecta cuál es la rama principal predeterminada).
+   - Trae los últimos cambios: `git pull origin main`
+   - Crea y cambia a la nueva rama: `git checkout -b <prefijo><nombre-kebab-case>`
+5. **Confirmación:** Informa al usuario que la rama fue creada exitosamente y que está listo para empezar a trabajar de forma aislada.
 
-- Si el usuario escribe la frase exacta **`finalizar refactor`**, ejecutar el merge de la rama actual contra `main`:
-  ```bash
-  git checkout main && git merge ...
-  ```
+---
 
-- No crear, eliminar ni renombrar ramas en este paso; solo fusionar la rama activa en `main`.
+## 2. Comandos de Finalización de Tarea
 
-## 0.4. Trigger rama `nuevo fix`
+### Uso esperados del usuario:
+- `finalizar feature` (o `finalizar fix`, `finalizar refactor`, etc.)
+- `finalizar tarea` (detecta automáticamente la rama actual)
 
-- Si el usuario escribe la frase exacta **`nuevo fix`**, crear inmediatamente una rama con prefijo `fix/` y un identificador breve descriptivo del problema, por ejemplo `fix/login-redirect` o `fix/patient-phone-layout`.
-- Comando:
-  ```bash
-  git checkout -b fix/{identificador-breve}
-  ```
-- Después de crear la rama, cambiar el contexto de trabajo a esa rama antes de continuar con cualquier otra acción.
+### Protocolo de ejecución:
+1. **Identificar la rama actual:**
+   - Ejecuta `git branch --show-current` para saber en qué rama estás.
+   - Si la rama actual es `main` o `master`, detén la ejecución e informa al usuario que no se puede finalizar estando en la rama principal.
+2. **Commit preventivo de cambios pendientes:**
+   - Revisa si hay cambios no guardados en la rama actual (`git status`).
+   - Si existen cambios, añade los archivos (`git add .`) y realiza un commit descriptivo: `git commit -m "chore: guardado de cambios antes de fusionar rama <nombre-rama>"`.
+3. **Proceso de Fusión (Merge):**
+   - Cambia a la rama principal: `git checkout main`
+   - Actualiza la rama principal: `git pull origin main`
+   - Fusiona la rama de la tarea: `git merge <nombre-rama-tarea> --no-ff -m "merge: fusionar <nombre-rama-tarea> en main"`
+4. **Limpieza:**
+   - Elimina la rama local de trabajo: `git branch -d <nombre-rama-tarea>`
+   - (Opcional) Si se requiere sincronización remota, realiza `git push origin main`.
+5. **Confirmación:**
+   - Muestra un resumen de la fusión e indica al usuario que se encuentra de nuevo en la rama `main` limpia.
+
+---
+
+## Reglas de Seguridad Básicas:
+- Si ocurre algún conflicto durante el `git merge`, **NO intentes resolverlo a ciegas**. Detén el proceso e informa claramente al usuario qué archivos tienen conflicto para que los revisen juntos.
+- Muestra en consola cada comando ejecutado de forma clara.
+
+---
 
 ## 1. Estructura de carpetas (no crear carpetas nuevas, usar las existentes)
 
