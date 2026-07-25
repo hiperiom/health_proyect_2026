@@ -28,7 +28,7 @@ export type Patient = {
     genderLabel?: string | null;
     phoneMobile: string;
     phoneLandline: string | null;
-    email: string;
+    email: string | null;
     createdByUserId: number;
     createdByName?: string | null;
     status: string;
