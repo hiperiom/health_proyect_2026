@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
-import { MoreVertical, Pencil, Plus, Search, Trash, User } from '@lucide/vue';
+import { AlertCircle, CheckCircle2, MoreVertical, Pencil, Plus, Search, Trash, User } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PatientPhotoUploader from '@/components/PatientPhotoUploader.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -39,8 +40,14 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
-import PatientPhotoUploader from '@/components/PatientPhotoUploader.vue';
-import { index, store, update, destroy } from '@/routes/patients';
+import {
+    checkDni,
+    checkEmail,
+    destroy,
+    index,
+    store,
+    update,
+} from '@/routes/patients';
 import type {
     Patient,
     PatientGenderOption,
@@ -80,6 +87,40 @@ const open = ref(false);
 const editingItem = ref<Patient | null>(props.item ?? null);
 const deleteDialogOpen = ref(false);
 const itemToDelete = ref<Patient | null>(null);
+
+// Estado para validación de DNI en tiempo real.
+const dniValue = ref<string>(props.item?.dni ?? '');
+const dniChecking = ref(false);
+const dniExists = ref(false);
+const dniExistingPatient = ref<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    dni: string;
+} | null>(null);
+const dniMessage = ref<string | null>(null);
+
+let dniCheckAbort: AbortController | null = null;
+let dniCheckSeq = 0;
+
+// Estado para validación de Email en tiempo real.
+const emailValue = ref<string>(props.item?.email ?? '');
+const emailChecking = ref(false);
+const emailExists = ref(false);
+const emailExistingPatient = ref<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+} | null>(null);
+const emailMessage = ref<string | null>(null);
+
+let emailCheckAbort: AbortController | null = null;
+let emailCheckSeq = 0;
+
+const isValidEmailFormat = (value: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+};
 
 const search = ref<string>(props.filters?.search ?? '');
 const statusFilter = ref<string>(
@@ -142,6 +183,56 @@ watch(statusFilter, () => applyFilters());
 watch(nacionalityFilter, () => applyFilters());
 watch(perPage, () => applyFilters());
 
+// Resetear validación de DNI y Email cada vez que se abre/cambia el formulario.
+watch(
+    () => editingItem.value?.id ?? null,
+    (id) => {
+        dniValue.value = id
+            ? (editingItem.value?.dni ?? '')
+            : '';
+        dniCheckSeq += 1;
+
+        if (dniCheckAbort) {
+            dniCheckAbort.abort();
+        }
+
+        dniChecking.value = false;
+        resetDniState();
+
+        emailValue.value = id
+            ? (editingItem.value?.email ?? '')
+            : '';
+        emailCheckSeq += 1;
+
+        if (emailCheckAbort) {
+            emailCheckAbort.abort();
+        }
+
+        emailChecking.value = false;
+        resetEmailState();
+    },
+);
+
+// Si el usuario modifica el DNI después de un resultado, invalidamos
+// el resultado anterior para que vuelva a verificarse al perder el foco.
+watch(dniValue, () => {
+    if (dniMessage.value !== null || dniExists.value) {
+        dniMessage.value = null;
+        dniExists.value = false;
+        dniExistingPatient.value = null;
+    }
+});
+
+// Si el usuario modifica el Email después de un resultado, invalidamos
+// el resultado anterior para que vuelva a verificarse al perder el foco.
+watch(emailValue, () => {
+    if (emailMessage.value !== null || emailExists.value) {
+        emailMessage.value = null;
+        emailExists.value = false;
+        emailExistingPatient.value = null;
+    }
+});
+
 function openEditSheet(item: Patient) {
     editingItem.value = item;
     open.value = true;
@@ -174,19 +265,210 @@ function age(birthDate: string | null | undefined): number {
     if (!birthDate) {
         return 0;
     }
+
     const birth = new Date(birthDate);
     const today = new Date();
     let years = today.getFullYear() - birth.getFullYear();
     const m = today.getMonth() - birth.getMonth();
+
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
         years--;
     }
+
     return years;
 }
 
 function onPhotoUpdated(url: string | null) {
     if (editingItem.value) {
         editingItem.value = { ...editingItem.value, photoUrl: url };
+    }
+}
+
+function resetDniState(): void {
+    dniExists.value = false;
+    dniExistingPatient.value = null;
+    dniMessage.value = null;
+}
+
+function resetEmailState(): void {
+    emailExists.value = false;
+    emailExistingPatient.value = null;
+    emailMessage.value = null;
+}
+
+/**
+ * Valida el DNI contra el backend. Se invoca cuando el input pierde el foco
+ * (vía @change) y solo actúa si el usuario escribió un valor "completo"
+ * (longitud >= 6 para cubrir cédulas, RIF, pasaportes, etc.).
+ */
+async function validateDni(): Promise<void> {
+    const value = dniValue.value.trim();
+
+    if (value.length < 6) {
+        resetDniState();
+
+        return;
+    }
+
+    if (dniCheckAbort) {
+        dniCheckAbort.abort();
+    }
+
+    const controller = new AbortController();
+    dniCheckAbort = controller;
+    const seq = ++dniCheckSeq;
+
+    dniChecking.value = true;
+
+    try {
+        const url = checkDni.url({
+            query: {
+                dni: value,
+                ...(editingItem.value?.id
+                    ? { ignore_id: editingItem.value.id }
+                    : {}),
+            },
+        });
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            signal: controller.signal,
+        });
+
+        if (seq !== dniCheckSeq) {
+            return;
+        }
+
+        if (!response.ok) {
+            resetDniState();
+
+            return;
+        }
+
+        const payload = (await response.json()) as {
+            exists: boolean;
+            patient: {
+                id: number;
+                firstName: string;
+                lastName: string;
+                dni: string;
+            } | null;
+        };
+
+        if (payload.exists && payload.patient) {
+            dniExists.value = true;
+            dniExistingPatient.value = payload.patient;
+            dniMessage.value = `El documento ${payload.patient.dni} ya está registrado a nombre de ${payload.patient.firstName} ${payload.patient.lastName}.`;
+        } else {
+            resetDniState();
+            dniMessage.value = 'Documento disponible.';
+        }
+    } catch (error) {
+        if (
+            error instanceof DOMException &&
+            error.name === 'AbortError'
+        ) {
+            return;
+        }
+
+        resetDniState();
+    } finally {
+        if (seq === dniCheckSeq) {
+            dniChecking.value = false;
+        }
+    }
+}
+
+/**
+ * Valida el Email contra el backend. Se invoca cuando el input pierde el foco
+ * (vía @change) y solo actúa si el usuario escribió un valor con formato de
+ * email válido.
+ */
+async function validateEmail(): Promise<void> {
+    const value = emailValue.value.trim().toLowerCase();
+
+    if (! value || ! isValidEmailFormat(value)) {
+        resetEmailState();
+
+        return;
+    }
+
+    if (emailCheckAbort) {
+        emailCheckAbort.abort();
+    }
+
+    const controller = new AbortController();
+    emailCheckAbort = controller;
+    const seq = ++emailCheckSeq;
+
+    emailChecking.value = true;
+
+    try {
+        const url = checkEmail.url({
+            query: {
+                email: value,
+                ...(editingItem.value?.id
+                    ? { ignore_id: editingItem.value.id }
+                    : {}),
+            },
+        });
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            signal: controller.signal,
+        });
+
+        if (seq !== emailCheckSeq) {
+            return;
+        }
+
+        if (! response.ok) {
+            resetEmailState();
+
+            return;
+        }
+
+        const payload = (await response.json()) as {
+            exists: boolean;
+            patient: {
+                id: number;
+                firstName: string;
+                lastName: string;
+                email: string;
+            } | null;
+        };
+
+        if (payload.exists && payload.patient) {
+            emailExists.value = true;
+            emailExistingPatient.value = payload.patient;
+            emailMessage.value = `El correo ${payload.patient.email} ya está registrado a nombre de ${payload.patient.firstName} ${payload.patient.lastName}.`;
+        } else {
+            resetEmailState();
+            emailMessage.value = 'Correo disponible.';
+        }
+    } catch (error) {
+        if (
+            error instanceof DOMException &&
+            error.name === 'AbortError'
+        ) {
+            return;
+        }
+
+        resetEmailState();
+    } finally {
+        if (seq === emailCheckSeq) {
+            emailChecking.value = false;
+        }
     }
 }
 </script>
@@ -357,10 +639,44 @@ function onPhotoUpdated(url: string | null) {
                                     <Input
                                         id="dni"
                                         name="dni"
+                                        v-model="dniValue"
                                         :default-value="editingItem?.dni"
+                                        :aria-invalid="dniExists || undefined"
+                                        :class="
+                                            dniExists
+                                                ? 'border-destructive focus-visible:ring-destructive'
+                                                : ''
+                                        "
                                         placeholder="12345678"
                                         required
+                                        @change="validateDni"
                                     />
+                                    <p
+                                        v-if="dniChecking"
+                                        class="text-xs text-muted-foreground"
+                                    >
+                                        Verificando documento...
+                                    </p>
+                                    <p
+                                        v-else-if="
+                                            dniExists && dniExistingPatient
+                                        "
+                                        class="flex items-start gap-1 text-xs text-destructive"
+                                    >
+                                        <AlertCircle
+                                            class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                        />
+                                        <span>{{ dniMessage }}</span>
+                                    </p>
+                                    <p
+                                        v-else-if="
+                                            dniMessage && !dniExists
+                                        "
+                                        class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
+                                    >
+                                        <CheckCircle2 class="h-3.5 w-3.5" />
+                                        <span>{{ dniMessage }}</span>
+                                    </p>
                                     <InputError :message="errors.dni" />
                                 </div>
                             </div>
@@ -382,7 +698,9 @@ function onPhotoUpdated(url: string | null) {
                                     <Label for="gender">Género</Label>
                                     <Select
                                         name="gender"
-                                        :default-value="editingItem?.gender"
+                                        :default-value="
+                                            editingItem?.gender ?? 'M'
+                                        "
                                     >
                                         <SelectTrigger>
                                             <SelectValue
@@ -443,10 +761,44 @@ function onPhotoUpdated(url: string | null) {
                                     id="email"
                                     name="email"
                                     type="email"
+                                    v-model="emailValue"
                                     :default-value="editingItem?.email"
+                                    :aria-invalid="emailExists || undefined"
+                                    :class="
+                                        emailExists
+                                            ? 'border-destructive focus-visible:ring-destructive'
+                                            : ''
+                                    "
                                     placeholder="paciente@correo.com"
                                     required
+                                    @change="validateEmail"
                                 />
+                                <p
+                                    v-if="emailChecking"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    Verificando correo...
+                                </p>
+                                <p
+                                    v-else-if="
+                                        emailExists && emailExistingPatient
+                                    "
+                                    class="flex items-start gap-1 text-xs text-destructive"
+                                >
+                                    <AlertCircle
+                                        class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                    />
+                                    <span>{{ emailMessage }}</span>
+                                </p>
+                                <p
+                                    v-else-if="
+                                        emailMessage && !emailExists
+                                    "
+                                    class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
+                                >
+                                    <CheckCircle2 class="h-3.5 w-3.5" />
+                                    <span>{{ emailMessage }}</span>
+                                </p>
                                 <InputError :message="errors.email" />
                             </div>
                             <div class="grid gap-2">
@@ -478,7 +830,12 @@ function onPhotoUpdated(url: string | null) {
                                         >Cancelar</Button
                                     >
                                 </SheetClose>
-                                <Button type="submit" :disabled="processing">
+                                <Button
+                                    type="submit"
+                                    :disabled="
+                                        processing || dniExists || emailExists
+                                    "
+                                >
                                     {{ editingItem ? 'Actualizar' : 'Crear' }}
                                 </Button>
                             </SheetFooter>

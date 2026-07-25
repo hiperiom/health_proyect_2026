@@ -6,9 +6,12 @@ use App\Enums\Gender;
 use App\Enums\Nacionality;
 use App\Enums\PatientStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Patients\CheckDniRequest;
+use App\Http\Requests\Patients\CheckEmailRequest;
 use App\Http\Requests\Patients\StorePatientsRequest;
 use App\Http\Requests\Patients\UpdatePatientsRequest;
 use App\Models\Patients;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -133,6 +136,74 @@ class PatientsController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Patient updated.')]);
 
         return to_route('patients.index');
+    }
+
+    public function checkDni(CheckDniRequest $request): JsonResponse
+    {
+        $dni = trim((string) $request->validated('dni'));
+        $ignoreId = $request->validated('ignore_id');
+
+        $query = Patients::query()->where('dni', $dni);
+
+        if ($ignoreId !== null) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        $patient = $query->first();
+
+        if ($patient === null) {
+            return response()->json([
+                'exists' => false,
+                'patient' => null,
+            ]);
+        }
+
+        return response()->json([
+            'exists' => true,
+            'patient' => [
+                'id' => $patient->id,
+                'firstName' => $patient->first_name,
+                'lastName' => $patient->last_name,
+                'nacionality' => $patient->nacionality?->value,
+                'dni' => $patient->dni,
+                'email' => $patient->email,
+                'phoneMobile' => $patient->phone_mobile,
+            ],
+        ]);
+    }
+
+    public function checkEmail(CheckEmailRequest $request): JsonResponse
+    {
+        $email = strtolower(trim((string) $request->validated('email')));
+        $ignoreId = $request->validated('ignore_id');
+
+        $query = Patients::query()->whereRaw('LOWER(email) = ?', [$email]);
+
+        if ($ignoreId !== null) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        $patient = $query->first();
+
+        if ($patient === null) {
+            return response()->json([
+                'exists' => false,
+                'patient' => null,
+            ]);
+        }
+
+        return response()->json([
+            'exists' => true,
+            'patient' => [
+                'id' => $patient->id,
+                'firstName' => $patient->first_name,
+                'lastName' => $patient->last_name,
+                'nacionality' => $patient->nacionality?->value,
+                'dni' => $patient->dni,
+                'email' => $patient->email,
+                'phoneMobile' => $patient->phone_mobile,
+            ],
+        ]);
     }
 
     public function destroy(Request $request, Patients $item): RedirectResponse

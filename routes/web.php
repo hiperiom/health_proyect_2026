@@ -71,6 +71,8 @@ Route::middleware(['auth'])->prefix('medicalespecialties')->name('medicalespecia
 Route::middleware(['auth'])->prefix('patients')->name('patients.')->group(function () {
     Route::get('/', [PatientsController::class, 'index'])->name('index');
     Route::post('/', [PatientsController::class, 'store'])->name('store');
+    Route::get('/check-dni', [PatientsController::class, 'checkDni'])->name('check-dni');
+    Route::get('/check-email', [PatientsController::class, 'checkEmail'])->name('check-email');
     Route::get('/{item}/edit', [PatientsController::class, 'edit'])->name('edit');
     Route::patch('/{item}', [PatientsController::class, 'update'])->name('update');
     Route::delete('/{item}', [PatientsController::class, 'destroy'])->name('destroy');

@@ -18,12 +18,31 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->superusuario()->create();
-        User::factory()->administrador()->create();
-        User::factory()->doctor()->create();
-        User::factory()->paciente()->create();
-        User::factory()->enfermeria()->create();
-        User::factory()->asistencial()->create();
+        if (! User::query()->where('email', 'superusuario@test.com')->exists()) {
+            User::factory()->superusuario()->create();
+        }
+
+        if (! User::query()->where('email', 'admin@test.com')->exists()) {
+            User::factory()->administrador()->create();
+        }
+
+        if (! User::query()->where('email', 'doctor@test.com')->exists()) {
+            User::factory()->doctor()->create();
+        }
+
+        if (! User::query()->where('email', 'paciente@test.com')->exists()) {
+            User::factory()->paciente()->create();
+        }
+
+        if (! User::query()->where('email', 'enfermeria@test.com')->exists()) {
+            User::factory()->enfermeria()->create();
+        }
+
+        if (! User::query()->where('email', 'asistencial@test.com')->exists()) {
+            User::factory()->asistencial()->create();
+        }
+
+        User::factory()->count(30)->create();
 
         $this->seedDefaultModules();
         $this->seedMedicalEspecialties();
