@@ -42,7 +42,8 @@ class UserController extends Controller
                     $q->where('slug', $role);
                 });
             })
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString()
             ->through(function (User $user) {

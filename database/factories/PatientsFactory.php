@@ -32,8 +32,8 @@ class PatientsFactory extends Factory
             'gender' => $this->faker->randomElement(Gender::values()),
             'phone_mobile' => '0'.(string) $this->faker->numberBetween(4120000000, 4149999999),
             'phone_landline' => $this->faker->boolean(40) ? '0'.(string) $this->faker->numberBetween(212000000, 212999999) : null,
-            'email' => $this->faker->unique()->safeEmail(),
             'created_by_user_id' => User::factory(),
+            'user_id' => User::factory(),
             'status' => PatientStatus::Active,
         ];
     }

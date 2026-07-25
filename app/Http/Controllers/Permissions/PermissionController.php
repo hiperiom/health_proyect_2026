@@ -16,7 +16,8 @@ class PermissionController extends Controller
     public function index(Request $request): Response
     {
         $items = Permission::query()
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get()
             ->map(fn (Permission $item) => [
                 'id' => $item->id,

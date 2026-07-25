@@ -11,11 +11,14 @@ use App\Http\Requests\Patients\CheckEmailRequest;
 use App\Http\Requests\Patients\StorePatientsRequest;
 use App\Http\Requests\Patients\UpdatePatientsRequest;
 use App\Models\Patients;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -33,20 +36,20 @@ class PatientsController extends Controller
         }
 
         $items = Patients::query()
-            ->with('createdBy:id,name')
+            ->with(['createdBy:id,name', 'user:id,name,email'])
             ->when($search !== '', function ($query) use ($search) {
                 $like = '%'.$search.'%';
                 $query->where(function ($q) use ($like) {
                     $q->where('first_name', 'like', $like)
                         ->orWhere('last_name', 'like', $like)
                         ->orWhere('dni', 'like', $like)
-                        ->orWhere('email', 'like', $like)
                         ->orWhere('phone_mobile', 'like', $like);
                 });
             })
             ->when(in_array($status, PatientStatus::values(), true), fn ($query) => $query->where('status', $status))
             ->when(in_array($nacionality, Nacionality::values(), true), fn ($query) => $query->where('nacionality', $nacionality))
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString()
             ->through(fn (Patients $item): array => [
@@ -63,7 +66,7 @@ class PatientsController extends Controller
                 'genderLabel' => $item->gender?->label(),
                 'phoneMobile' => $item->phone_mobile,
                 'phoneLandline' => $item->phone_landline,
-                'email' => $item->email,
+                'email' => $item->user?->email,
                 'createdByUserId' => $item->created_by_user_id,
                 'createdByName' => $item->createdBy?->name,
                 'status' => $item->status?->value,
@@ -93,7 +96,22 @@ class PatientsController extends Controller
         $data['created_by_user_id'] = Auth::id();
 
         DB::transaction(function () use ($data) {
-            Patients::create($data);
+            $user = User::create([
+                'name' => trim($data['first_name'].' '.$data['last_name']),
+                'email' => $data['email'],
+                'password' => Hash::make('password'),
+            ]);
+
+            $role = Role::query()->firstOrCreate(
+                ['slug' => 'paciente'],
+                ['name' => 'Paciente']
+            );
+            $user->roles()->sync([$role->id]);
+
+            unset($data['email']);
+
+            $patient = Patients::create($data);
+            $patient->update(['user_id' => $user->id]);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Patient created.')]);
@@ -103,7 +121,7 @@ class PatientsController extends Controller
 
     public function edit(Request $request, Patients $item): Response
     {
-        $item->load('createdBy:id,name');
+        $item->load(['createdBy:id,name', 'user:id,name,email']);
 
         return Inertia::render('patients/Index', [
             'item' => [
@@ -117,7 +135,7 @@ class PatientsController extends Controller
                 'gender' => $item->gender?->value,
                 'phoneMobile' => $item->phone_mobile,
                 'phoneLandline' => $item->phone_landline,
-                'email' => $item->email,
+                'email' => $item->user?->email,
                 'createdByUserId' => $item->created_by_user_id,
                 'status' => $item->status?->value,
             ],
@@ -130,7 +148,30 @@ class PatientsController extends Controller
     public function update(UpdatePatientsRequest $request, Patients $item): RedirectResponse
     {
         DB::transaction(function () use ($item, $request) {
-            $item->update($request->validated());
+            $data = $request->validated();
+            $email = $data['email'] ?? null;
+
+            if ($email !== null && $item->user && $item->user->email !== $email) {
+                $item->user->update(['email' => $email]);
+            } elseif ($email !== null && ! $item->user) {
+                $user = User::create([
+                    'name' => trim($item->first_name.' '.$item->last_name),
+                    'email' => $email,
+                    'password' => Hash::make('password'),
+                ]);
+
+                $role = Role::query()->firstOrCreate(
+                    ['slug' => 'paciente'],
+                    ['name' => 'Paciente']
+                );
+                $user->roles()->sync([$role->id]);
+
+                $item->update(['user_id' => $user->id]);
+            }
+
+            unset($data['email']);
+
+            $item->update($data);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Patient updated.')]);
@@ -166,7 +207,6 @@ class PatientsController extends Controller
                 'lastName' => $patient->last_name,
                 'nacionality' => $patient->nacionality?->value,
                 'dni' => $patient->dni,
-                'email' => $patient->email,
                 'phoneMobile' => $patient->phone_mobile,
             ],
         ]);
@@ -174,35 +214,26 @@ class PatientsController extends Controller
 
     public function checkEmail(CheckEmailRequest $request): JsonResponse
     {
-        $email = strtolower(trim((string) $request->validated('email')));
-        $ignoreId = $request->validated('ignore_id');
+        $email = trim((string) $request->validated('email'));
+        $ignorePatientId = $request->validated('ignore_id');
 
-        $query = Patients::query()->whereRaw('LOWER(email) = ?', [$email]);
+        $existingUser = User::query()
+            ->when($ignorePatientId !== null, function ($query) use ($ignorePatientId) {
+                $query->whereHas('patients', function ($q) use ($ignorePatientId) {
+                    $q->where('patients.id', '!=', $ignorePatientId);
+                });
+            })
+            ->where('email', $email)
+            ->exists();
 
-        if ($ignoreId !== null) {
-            $query->where('id', '!=', $ignoreId);
-        }
-
-        $patient = $query->first();
-
-        if ($patient === null) {
+        if (! $existingUser) {
             return response()->json([
                 'exists' => false,
-                'patient' => null,
             ]);
         }
 
         return response()->json([
             'exists' => true,
-            'patient' => [
-                'id' => $patient->id,
-                'firstName' => $patient->first_name,
-                'lastName' => $patient->last_name,
-                'nacionality' => $patient->nacionality?->value,
-                'dni' => $patient->dni,
-                'email' => $patient->email,
-                'phoneMobile' => $patient->phone_mobile,
-            ],
         ]);
     }
 

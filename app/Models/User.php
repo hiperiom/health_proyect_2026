@@ -117,8 +117,7 @@ class User extends Authenticatable implements PasskeyUser
      * domain tables that justify the given role.
      *
      * For the `paciente` role, the user is considered to "own" a patient
-     * record if they appear as the creator of any `Patients` row OR if a
-     * patient row exists whose `email` matches the user's email.
+     * record if they appear as the creator of any `Patients` row.
      *
      * For staff roles (`doctor`, `enfermeria`, `asistencial`) we currently
      * do not have dedicated domain tables, so we fall back to the same
@@ -133,9 +132,7 @@ class User extends Authenticatable implements PasskeyUser
     public function hasDomainRecordForRole(string $roleSlug): bool
     {
         return match ($roleSlug) {
-            'paciente' => $this->createdPatients()->exists()
-                || Patients::query()->where('email', $this->email)->exists(),
-            'doctor', 'enfermeria', 'asistencial' => $this->createdPatients()->exists(),
+            'paciente', 'doctor', 'enfermeria', 'asistencial' => $this->createdPatients()->exists(),
             'superusuario', 'administrador' => true,
             default => false,
         };

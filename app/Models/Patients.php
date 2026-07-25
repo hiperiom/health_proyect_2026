@@ -26,8 +26,8 @@ use Illuminate\Support\Facades\Storage;
     'gender',
     'phone_mobile',
     'phone_landline',
-    'email',
     'created_by_user_id',
+    'user_id',
     'status',
 ])]
 class Patients extends Model
@@ -48,6 +48,12 @@ class Patients extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /** @return Attribute<string|null, string|null> */

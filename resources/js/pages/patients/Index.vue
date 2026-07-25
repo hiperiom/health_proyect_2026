@@ -98,29 +98,20 @@ const dniExistingPatient = ref<{
     lastName: string;
     dni: string;
 } | null>(null);
+const dniTooShort = ref(false);
 const dniMessage = ref<string | null>(null);
+const dniTooShortMessage = 'El número de documento debe contener al menos 6 caracteres.';
+
+const emailValue = ref<string>(props.item?.email ?? '');
+const emailChecking = ref(false);
+const emailExists = ref(false);
+const emailMessage = ref<string | null>(null);
 
 let dniCheckAbort: AbortController | null = null;
 let dniCheckSeq = 0;
 
-// Estado para validación de Email en tiempo real.
-const emailValue = ref<string>(props.item?.email ?? '');
-const emailChecking = ref(false);
-const emailExists = ref(false);
-const emailExistingPatient = ref<{
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-} | null>(null);
-const emailMessage = ref<string | null>(null);
-
 let emailCheckAbort: AbortController | null = null;
 let emailCheckSeq = 0;
-
-const isValidEmailFormat = (value: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-};
 
 const search = ref<string>(props.filters?.search ?? '');
 const statusFilter = ref<string>(
@@ -140,10 +131,6 @@ const perPage = ref<string>(
 );
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null;
-
-const filters = computed<Record<string, string | number | undefined>>(
-    () => props.filters ?? {},
-);
 
 function applyFilters() {
     const query: Record<string, string | number> = { page: 1 };
@@ -183,12 +170,14 @@ watch(statusFilter, () => applyFilters());
 watch(nacionalityFilter, () => applyFilters());
 watch(perPage, () => applyFilters());
 
-// Resetear validación de DNI y Email cada vez que se abre/cambia el formulario.
 watch(
     () => editingItem.value?.id ?? null,
     (id) => {
         dniValue.value = id
             ? (editingItem.value?.dni ?? '')
+            : '';
+        emailValue.value = id
+            ? (editingItem.value?.email ?? '')
             : '';
         dniCheckSeq += 1;
 
@@ -198,10 +187,8 @@ watch(
 
         dniChecking.value = false;
         resetDniState();
+        dniTooShort.value = false;
 
-        emailValue.value = id
-            ? (editingItem.value?.email ?? '')
-            : '';
         emailCheckSeq += 1;
 
         if (emailCheckAbort) {
@@ -213,23 +200,28 @@ watch(
     },
 );
 
-// Si el usuario modifica el DNI después de un resultado, invalidamos
-// el resultado anterior para que vuelva a verificarse al perder el foco.
-watch(dniValue, () => {
+watch(dniValue, (value) => {
+    dniTooShort.value = value.trim().length > 0 && value.trim().length < 6;
+
     if (dniMessage.value !== null || dniExists.value) {
         dniMessage.value = null;
         dniExists.value = false;
         dniExistingPatient.value = null;
     }
+
+    if (value.trim().length >= 6) {
+        validateDni();
+    }
 });
 
-// Si el usuario modifica el Email después de un resultado, invalidamos
-// el resultado anterior para que vuelva a verificarse al perder el foco.
-watch(emailValue, () => {
+watch(emailValue, (value) => {
     if (emailMessage.value !== null || emailExists.value) {
         emailMessage.value = null;
         emailExists.value = false;
-        emailExistingPatient.value = null;
+    }
+
+    if (value.trim().length > 0) {
+        validateEmail();
     }
 });
 
@@ -290,17 +282,93 @@ function resetDniState(): void {
     dniMessage.value = null;
 }
 
+function onDniBlur(): void {
+    if (dniValue.value.trim().length > 0 && dniValue.value.trim().length < 6) {
+        dniTooShort.value = true;
+    }
+}
+
 function resetEmailState(): void {
     emailExists.value = false;
-    emailExistingPatient.value = null;
     emailMessage.value = null;
 }
 
-/**
- * Valida el DNI contra el backend. Se invoca cuando el input pierde el foco
- * (vía @change) y solo actúa si el usuario escribió un valor "completo"
- * (longitud >= 6 para cubrir cédulas, RIF, pasaportes, etc.).
- */
+async function validateEmail(): Promise<void> {
+    const value = emailValue.value.trim();
+
+    if (value.length === 0) {
+        resetEmailState();
+
+        return;
+    }
+
+    if (emailCheckAbort) {
+        emailCheckAbort.abort();
+    }
+
+    const controller = new AbortController();
+    emailCheckAbort = controller;
+    const seq = ++emailCheckSeq;
+
+    emailChecking.value = true;
+
+    try {
+        const url = checkEmail.url({
+            query: {
+                email: value,
+                ...(editingItem.value?.id
+                    ? { ignore_id: editingItem.value.id }
+                    : {}),
+            },
+        });
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            signal: controller.signal,
+        });
+
+        if (seq !== emailCheckSeq) {
+            return;
+        }
+
+        if (!response.ok) {
+            resetEmailState();
+
+            return;
+        }
+
+        const payload = (await response.json()) as {
+            exists: boolean;
+        };
+
+        if (payload.exists) {
+            emailExists.value = true;
+            emailMessage.value = 'Este correo electrónico ya está registrado.';
+        } else {
+            resetEmailState();
+            emailMessage.value = 'Correo disponible.';
+        }
+    } catch (error) {
+        if (
+            error instanceof DOMException &&
+            error.name === 'AbortError'
+        ) {
+            return;
+        }
+
+        resetEmailState();
+    } finally {
+        if (seq === emailCheckSeq) {
+            emailChecking.value = false;
+        }
+    }
+}
+
 async function validateDni(): Promise<void> {
     const value = dniValue.value.trim();
 
@@ -384,94 +452,10 @@ async function validateDni(): Promise<void> {
     }
 }
 
-/**
- * Valida el Email contra el backend. Se invoca cuando el input pierde el foco
- * (vía @change) y solo actúa si el usuario escribió un valor con formato de
- * email válido.
- */
-async function validateEmail(): Promise<void> {
-    const value = emailValue.value.trim().toLowerCase();
-
-    if (! value || ! isValidEmailFormat(value)) {
-        resetEmailState();
-
-        return;
-    }
-
-    if (emailCheckAbort) {
-        emailCheckAbort.abort();
-    }
-
-    const controller = new AbortController();
-    emailCheckAbort = controller;
-    const seq = ++emailCheckSeq;
-
-    emailChecking.value = true;
-
-    try {
-        const url = checkEmail.url({
-            query: {
-                email: value,
-                ...(editingItem.value?.id
-                    ? { ignore_id: editingItem.value.id }
-                    : {}),
-            },
-        });
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-            signal: controller.signal,
-        });
-
-        if (seq !== emailCheckSeq) {
-            return;
-        }
-
-        if (! response.ok) {
-            resetEmailState();
-
-            return;
-        }
-
-        const payload = (await response.json()) as {
-            exists: boolean;
-            patient: {
-                id: number;
-                firstName: string;
-                lastName: string;
-                email: string;
-            } | null;
-        };
-
-        if (payload.exists && payload.patient) {
-            emailExists.value = true;
-            emailExistingPatient.value = payload.patient;
-            emailMessage.value = `El correo ${payload.patient.email} ya está registrado a nombre de ${payload.patient.firstName} ${payload.patient.lastName}.`;
-        } else {
-            resetEmailState();
-            emailMessage.value = 'Correo disponible.';
-        }
-    } catch (error) {
-        if (
-            error instanceof DOMException &&
-            error.name === 'AbortError'
-        ) {
-            return;
-        }
-
-        resetEmailState();
-    } finally {
-        if (seq === emailCheckSeq) {
-            emailChecking.value = false;
-        }
-    }
-}
+// keep computed import used (filters is reserved for future use)
+void computed;
 </script>
+
 
 <template>
     <Head title="Patients" />
@@ -493,7 +477,7 @@ async function validateEmail(): Promise<void> {
                     <Input
                         v-model="search"
                         type="search"
-                        placeholder="Buscar por nombre, DNI, email o teléfono..."
+                        placeholder="Buscar por nombre, DNI o teléfono..."
                         class="pl-8"
                     />
                 </div>
@@ -632,7 +616,9 @@ async function validateEmail(): Promise<void> {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <InputError :message="errors.nacionality" />
+                                    <InputError
+                                        :message="errors.nacionality"
+                                    />
                                 </div>
                                 <div class="grid gap-2">
                                     <Label for="dni">Número de Documento</Label>
@@ -641,18 +627,27 @@ async function validateEmail(): Promise<void> {
                                         name="dni"
                                         v-model="dniValue"
                                         :default-value="editingItem?.dni"
-                                        :aria-invalid="dniExists || undefined"
+                                        :aria-invalid="dniExists || dniTooShort || undefined"
                                         :class="
-                                            dniExists
+                                            dniExists || dniTooShort
                                                 ? 'border-destructive focus-visible:ring-destructive'
                                                 : ''
                                         "
                                         placeholder="12345678"
                                         required
-                                        @change="validateDni"
+                                        @blur="onDniBlur"
                                     />
                                     <p
-                                        v-if="dniChecking"
+                                        v-if="dniTooShort"
+                                        class="flex items-start gap-1 text-xs text-destructive"
+                                    >
+                                        <AlertCircle
+                                            class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                        />
+                                        <span>{{ dniTooShortMessage }}</span>
+                                    </p>
+                                    <p
+                                        v-else-if="dniChecking"
                                         class="text-xs text-muted-foreground"
                                     >
                                         Verificando documento...
@@ -692,7 +687,9 @@ async function validateEmail(): Promise<void> {
                                         :default-value="editingItem?.birthDate"
                                         required
                                     />
-                                    <InputError :message="errors.birth_date" />
+                                    <InputError
+                                        :message="errors.birth_date"
+                                    />
                                 </div>
                                 <div class="grid gap-2">
                                     <Label for="gender">Género</Label>
@@ -763,15 +760,8 @@ async function validateEmail(): Promise<void> {
                                     type="email"
                                     v-model="emailValue"
                                     :default-value="editingItem?.email"
-                                    :aria-invalid="emailExists || undefined"
-                                    :class="
-                                        emailExists
-                                            ? 'border-destructive focus-visible:ring-destructive'
-                                            : ''
-                                    "
-                                    placeholder="paciente@correo.com"
+                                    placeholder="paciente@ejemplo.com"
                                     required
-                                    @change="validateEmail"
                                 />
                                 <p
                                     v-if="emailChecking"
@@ -781,7 +771,7 @@ async function validateEmail(): Promise<void> {
                                 </p>
                                 <p
                                     v-else-if="
-                                        emailExists && emailExistingPatient
+                                        emailExists && emailMessage
                                     "
                                     class="flex items-start gap-1 text-xs text-destructive"
                                 >
@@ -832,9 +822,7 @@ async function validateEmail(): Promise<void> {
                                 </SheetClose>
                                 <Button
                                     type="submit"
-                                    :disabled="
-                                        processing || dniExists || emailExists
-                                    "
+                                    :disabled="processing || dniExists"
                                 >
                                     {{ editingItem ? 'Actualizar' : 'Crear' }}
                                 </Button>
@@ -874,9 +862,7 @@ async function validateEmail(): Promise<void> {
                 <thead class="bg-muted/50">
                     <tr>
                         <th class="px-4 py-3 font-medium">Paciente</th>
-                        <th class="px-4 py-3 font-medium">DNI</th>
                         <th class="px-4 py-3 font-medium">Teléfono</th>
-                        <th class="px-4 py-3 font-medium">Edad</th>
                         <th class="px-4 py-3 font-medium">Estado</th>
                         <th class="px-4 py-3 text-right font-medium">
                             Acciones
@@ -906,21 +892,18 @@ async function validateEmail(): Promise<void> {
                                     <span class="font-medium">{{
                                         fullName(item)
                                     }}</span>
-                                    <span
-                                        class="text-xs text-muted-foreground"
-                                        >{{ item.email }}</span
-                                    >
+                                    <span class="text-xs text-muted-foreground">
+                                        {{ item.nacionality }}-{{ item.dni }}
+                                        <span class="mx-1">&middot;</span>
+                                        {{ age(item.birthDate) }} años
+                                        <span class="mx-1">&middot;</span>
+                                        {{ item.genderLabel ?? item.gender }}
+                                    </span>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-4 py-3 font-mono text-xs">
-                            {{ item.nacionality }}-{{ item.dni }}
-                        </td>
                         <td class="px-4 py-3 text-muted-foreground">
                             {{ item.phoneMobile }}
-                        </td>
-                        <td class="px-4 py-3 text-muted-foreground">
-                            {{ age(item.birthDate) }} años
                         </td>
                         <td class="px-4 py-3">
                             <span
@@ -965,7 +948,7 @@ async function validateEmail(): Promise<void> {
                     </tr>
                     <tr v-if="!items.data.length">
                         <td
-                            colspan="6"
+                            colspan="4"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
                             No se encontraron pacientes.
@@ -1000,37 +983,10 @@ async function validateEmail(): Promise<void> {
                         </SelectContent>
                     </Select>
                 </div>
-                <div class="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        :disabled="items.current_page === 1"
-                        @click="
-                            router.get(
-                                index().url,
-                                { ...filters, page: items.current_page - 1 },
-                                { preserveState: true, preserveScroll: true },
-                            )
-                        "
-                    >
-                        Anterior
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        :disabled="items.current_page === items.last_page"
-                        @click="
-                            router.get(
-                                index().url,
-                                { ...filters, page: items.current_page + 1 },
-                                { preserveState: true, preserveScroll: true },
-                            )
-                        "
-                    >
-                        Siguiente
-                    </Button>
-                </div>
             </div>
         </div>
     </div>
 </template>
+
+
+

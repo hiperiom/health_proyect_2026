@@ -107,7 +107,7 @@ it('creates a patient through the form', function () {
         'gender' => 'M',
         'phone_mobile' => '04141234567',
         'phone_landline' => '',
-        'email' => 'juan@example.com',
+        'email' => 'juan.perez@example.com',
         'status' => 'active',
     ];
 
@@ -122,6 +122,29 @@ it('creates a patient through the form', function () {
         'first_name' => 'Juan',
         'created_by_user_id' => $user->id,
     ]);
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'juan.perez@example.com',
+    ]);
+});
+
+it('checks email availability', function () {
+    $role = Role::query()->firstOrCreate(
+        ['slug' => 'superusuario'],
+        ['name' => 'Superusuario']
+    );
+    $user = User::factory()->create();
+    $user->roles()->sync([$role->id]);
+
+    actingAs($user)
+        ->get(route('patients.check-email', ['email' => 'new@example.com']))
+        ->assertOk()
+        ->assertJson(['exists' => false]);
+
+    actingAs($user)
+        ->get(route('patients.check-email', ['email' => $user->email]))
+        ->assertOk()
+        ->assertJson(['exists' => true]);
 });
 
 it('uploads a patient photo', function () {

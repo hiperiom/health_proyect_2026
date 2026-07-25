@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
 use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
@@ -26,7 +27,7 @@ test('users can authenticate using the login screen', function () {
 test('passkey login response redirects to the dashboard', function () {
     $user = User::factory()->create();
 
-    $request = \Illuminate\Http\Request::create(route('login', absolute: false), 'GET', server: [
+    $request = Request::create(route('login', absolute: false), 'GET', server: [
         'HTTP_ACCEPT' => 'application/json',
     ]);
     $request->setLaravelSession($this->app['session.store']);

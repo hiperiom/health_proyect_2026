@@ -27,7 +27,7 @@ class StorePatientsRequest extends FormRequest
             'gender' => ['required', 'string', Rule::in(Gender::values())],
             'phone_mobile' => ['required', 'string', 'max:30'],
             'phone_landline' => ['nullable', 'string', 'max:30'],
-            'email' => ['required', 'string', 'email', 'max:150'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'status' => ['required', 'string', Rule::enum(PatientStatus::class)],
         ];
     }

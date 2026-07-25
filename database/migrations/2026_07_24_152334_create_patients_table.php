@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('gender', 20);
             $table->string('phone_mobile', 30);
             $table->string('phone_landline', 30)->nullable();
-            $table->string('email', 150);
             $table->foreignId('created_by_user_id')->constrained('users')->cascadeOnDelete();
             $table->string('status', 20)->default('active');
             $table->timestamps();

@@ -14,7 +14,7 @@ class CheckEmailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'max:150'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'ignore_id' => ['nullable', 'integer', 'exists:patients,id'],
         ];
     }

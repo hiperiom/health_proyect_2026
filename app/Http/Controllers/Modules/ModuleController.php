@@ -36,7 +36,8 @@ class ModuleController extends Controller
                         ->orWhere('description', 'like', $like);
                 });
             })
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString()
             ->through(fn (Module $item) => [

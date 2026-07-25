@@ -29,7 +29,7 @@ class UpdatePatientsRequest extends FormRequest
             'gender' => ['sometimes', 'required', 'string', Rule::in(Gender::values())],
             'phone_mobile' => ['sometimes', 'required', 'string', 'max:30'],
             'phone_landline' => ['sometimes', 'nullable', 'string', 'max:30'],
-            'email' => ['sometimes', 'required', 'string', 'email', 'max:150'],
+            'email' => ['sometimes', 'required', 'string', 'email', 'max:255', 'unique:users,email'],
             'status' => ['sometimes', 'required', 'string', Rule::enum(PatientStatus::class)],
         ];
     }

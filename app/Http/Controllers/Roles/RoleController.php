@@ -32,7 +32,8 @@ class RoleController extends Controller
                         ->orWhere('slug', 'like', $like);
                 });
             })
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString()
             ->through(function (Role $item) {
