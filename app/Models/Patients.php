@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Gender;
 use App\Enums\Nacionality;
 use App\Enums\PatientStatus;
+use App\Exceptions\InvalidPatientUserException;
 use Database\Factories\PatientsFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -42,6 +43,15 @@ class Patients extends Model
             'gender' => Gender::class,
             'status' => PatientStatus::class,
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $patient): void {
+            if (empty($patient->user_id)) {
+                throw new InvalidPatientUserException('A patient must be linked to a user.');
+            }
+        });
     }
 
     /** @return BelongsTo<User, $this> */

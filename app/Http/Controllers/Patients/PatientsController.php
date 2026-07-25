@@ -110,8 +110,9 @@ class PatientsController extends Controller
 
             unset($data['email']);
 
+            $data['user_id'] = $user->id;
+
             $patient = Patients::create($data);
-            $patient->update(['user_id' => $user->id]);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Patient created.')]);

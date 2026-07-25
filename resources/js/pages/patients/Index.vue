@@ -759,7 +759,6 @@ void computed;
                                     name="email"
                                     type="email"
                                     v-model="emailValue"
-                                    :default-value="editingItem?.email"
                                     placeholder="paciente@ejemplo.com"
                                     required
                                 />
