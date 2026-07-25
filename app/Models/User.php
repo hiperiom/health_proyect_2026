@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -76,6 +77,17 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * Patients created by this user (i.e. patient records associated with
+     * the user account through `created_by_user_id`).
+     *
+     * @return HasMany<Patients>
+     */
+    public function createdPatients(): HasMany
+    {
+        return $this->hasMany(Patients::class, 'created_by_user_id');
+    }
+
+    /**
      * Get the user's primary role (the only role, if any).
      */
     public function primaryRole(): ?Role
@@ -98,5 +110,49 @@ class User extends Authenticatable implements PasskeyUser
         }
 
         return $this->permissions()->pluck('slug')->all();
+    }
+
+    /**
+     * Determine whether the user has a matching record in any of the
+     * domain tables that justify the given role.
+     *
+     * For the `paciente` role, the user is considered to "own" a patient
+     * record if they appear as the creator of any `Patients` row OR if a
+     * patient row exists whose `email` matches the user's email.
+     *
+     * For staff roles (`doctor`, `enfermeria`, `asistencial`) we currently
+     * do not have dedicated domain tables, so we fall back to the same
+     * `createdPatients` association as a proxy: a staff user that has
+     * created patient records is allowed to keep their role. This can be
+     * tightened later by introducing proper staff tables.
+     *
+     * For administrative roles (`superusuario`, `administrador`) the user
+     * is always considered to have a valid match because those roles
+     * describe an organisational position rather than a domain record.
+     */
+    public function hasDomainRecordForRole(string $roleSlug): bool
+    {
+        return match ($roleSlug) {
+            'paciente' => $this->createdPatients()->exists()
+                || Patients::query()->where('email', $this->email)->exists(),
+            'doctor', 'enfermeria', 'asistencial' => $this->createdPatients()->exists(),
+            'superusuario', 'administrador' => true,
+            default => false,
+        };
+    }
+
+    /**
+     * Return only the roles that the user is currently entitled to keep
+     * because they have a matching domain record. Roles for which the
+     * user has no domain record are dropped, so callers can render an
+     * "Indefinido" placeholder for users without any entitled role.
+     *
+     * @return Collection<int, Role>
+     */
+    public function entitledRoles(): Collection
+    {
+        return $this->roles
+            ->filter(fn (Role $role): bool => $this->hasDomainRecordForRole($role->slug))
+            ->values();
     }
 }

@@ -29,7 +29,7 @@ class UserController extends Controller
         }
 
         $users = User::query()
-            ->with('roles:id,slug,name')
+            ->with(['roles:id,slug,name,color_class,text_class,icon_svg'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $like = '%'.$search.'%';
@@ -46,7 +46,8 @@ class UserController extends Controller
             ->paginate($perPage)
             ->withQueryString()
             ->through(function (User $user) {
-                $primaryRole = $user->roles->first();
+                $entitledRoles = $user->entitledRoles();
+                $primaryRole = $entitledRoles->first();
 
                 return [
                     'id' => $user->id,
@@ -55,6 +56,16 @@ class UserController extends Controller
                     'role' => $primaryRole?->slug,
                     'roleName' => $primaryRole?->name,
                     'passwordUpdated' => $user->password_updated,
+                    'roles' => $entitledRoles
+                        ->map(fn (Role $r): array => [
+                            'slug' => $r->slug,
+                            'name' => $r->name,
+                            'color_class' => $r->color_class,
+                            'text_class' => $r->text_class,
+                            'icon_svg' => $r->icon_svg,
+                        ])
+                        ->values()
+                        ->all(),
                     'createdAt' => $user->created_at?->toISOString(),
                     'updatedAt' => $user->updated_at?->toISOString(),
                 ];

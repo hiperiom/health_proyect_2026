@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\MedicalEspecialties;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -42,7 +43,16 @@ class DatabaseSeeder extends Seeder
             User::factory()->asistencial()->create();
         }
 
-        User::factory()->count(30)->create();
+        User::factory()
+            ->count(30)
+            ->afterCreating(function (User $user): void {
+                $role = Role::query()->firstOrCreate(
+                    ['slug' => 'paciente'],
+                    ['name' => 'Paciente']
+                );
+                $user->roles()->sync([$role->id]);
+            })
+            ->create();
 
         $this->seedDefaultModules();
         $this->seedMedicalEspecialties();

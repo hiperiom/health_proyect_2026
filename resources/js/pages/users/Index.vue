@@ -24,6 +24,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -33,12 +39,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Sheet,
     SheetClose,
@@ -56,7 +56,7 @@ import {
     destroy,
     resetPassword as resetPasswordRoute,
 } from '@/routes/users';
-import type { RoleOption, UserModel } from '@/types/users';
+import type { RoleOption, UserModel, UserRole } from '@/types/users';
 
 const page = usePage();
 const temporaryPassword = ref<string | null>(null);
@@ -231,44 +231,26 @@ function assignRole() {
     );
 }
 
-function roleLabel(slug: string | null | undefined): string {
-    if (!slug) {
-        return '—';
+function userRoleClasses(role: UserRole): string {
+    const parts: string[] = ['border-transparent'];
+
+    if (role.color_class) {
+        parts.push(role.color_class);
+    } else {
+        parts.push('bg-secondary');
     }
 
-    return (
-        availableRoles.value.find((role: RoleOption) => role.value === slug)
-            ?.label ?? slug
-    );
+    if (role.text_class) {
+        parts.push(role.text_class);
+    } else {
+        parts.push('text-secondary-foreground');
+    }
+
+    return parts.join(' ');
 }
 
-function roleClasses(slug: string | null | undefined): string {
-    if (!slug) {
-        return 'border-transparent bg-muted text-muted-foreground';
-    }
-    const role = availableRoles.value.find((r: RoleOption) => r.value === slug);
-
-    if (role) {
-        const parts: string[] = [];
-        if (role.color_class) parts.push(role.color_class);
-        if (role.text_class) parts.push(role.text_class);
-        // ensure border-transparent if not provided
-        parts.push('border-transparent');
-
-        return parts.join(' ');
-    }
-
-    return 'border-transparent bg-secondary text-secondary-foreground';
-}
-
-function roleIcon(slug: string | null | undefined): string | null {
-    if (!slug) {
-        return null;
-    }
-
-    const role = availableRoles.value.find((r: RoleOption) => r.value === slug);
-
-    return role?.icon_svg ?? null;
+function userRoleIcon(role: UserRole): string | null {
+    return role.icon_svg ?? null;
 }
 </script>
 
@@ -532,16 +514,29 @@ function roleIcon(slug: string | null | undefined): string | null {
                         <td class="px-4 py-3">{{ item.name }}</td>
                         <td class="px-4 py-3">{{ item.email }}</td>
                         <td class="px-4 py-3">
-                            <span
-                                class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                                :class="roleClasses(item.role)"
+                            <div
+                                v-if="item.roles && item.roles.length > 0"
+                                class="flex flex-wrap items-center gap-1"
                             >
                                 <span
-                                    v-if="roleIcon(item.role)"
-                                    class="mr-2 h-4 w-4"
-                                    v-html="roleIcon(item.role)"
-                                ></span>
-                                {{ roleLabel(item.role) }}
+                                    v-for="role in item.roles"
+                                    :key="role.slug"
+                                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                                    :class="userRoleClasses(role)"
+                                >
+                                    <span
+                                        v-if="userRoleIcon(role)"
+                                        class="mr-2 h-4 w-4"
+                                        v-html="userRoleIcon(role)"
+                                    ></span>
+                                    {{ role.name }}
+                                </span>
+                            </div>
+                            <span
+                                v-else
+                                class="inline-flex items-center rounded-full border border-transparent bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground"
+                            >
+                                Indefinido
                             </span>
                         </td>
                         <td class="px-4 py-3 text-right">
