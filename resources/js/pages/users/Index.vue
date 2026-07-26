@@ -1,15 +1,84 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3';
-import {
-    CircleCheck,
-    Key,
-    MoreVertical,
-    Pencil,
-    Plus,
-    Search,
-    Shield,
-    Trash,
-} from '@lucide/vue';
+// 1. Importar el icono de ayuda (agréguelo a su import existente de lucide)
+import { CircleCheck, Key, MoreVertical, Pencil, Plus, Search, Shield, Trash, HelpCircle } from '@lucide/vue';
+
+// 2. Importar driver.js y sus estilos
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+
+// ... (su código existente de refs, watchers, etc.) ...
+
+// 3. Definir la función que inicia el Tour
+const startTour = () => {
+    const driverObj = driver({
+        showProgress: true,
+        animate: true,
+        allowClose: true,
+        overlayOpacity: 0.5,
+        nextBtnText: 'Siguiente →',
+        prevBtnText: '← Anterior',
+        doneBtnText: 'Finalizar',
+        steps: [
+            {
+                element: '#tour-search',
+                popover: {
+                    title: '🔍 Buscar Usuarios',
+                    description: 'Escribe el nombre o correo para filtrar la lista en tiempo real. El sistema aplica un debounce de 300ms para optimizar la búsqueda.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-filter',
+                popover: {
+                    title: '🛡️ Filtrar por Rol',
+                    description: 'Selecciona un rol específico (Admin, User, etc.) para ver únicamente los usuarios que poseen ese perfil.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-new-btn',
+                popover: {
+                    title: '➕ Crear Nuevo Usuario',
+                    description: 'Haz clic aquí para abrir el panel lateral (Sheet) y registrar un nuevo usuario en el sistema.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-table',
+                popover: {
+                    title: '📋 Tabla de Registros',
+                    description: 'Aquí se listan todos los usuarios. Puedes ver su nombre, correo y el rol asignado con su respectiva insignia de color.',
+                    side: 'top',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-actions',
+                popover: {
+                    title: '⚙️ Acciones por Usuario',
+                    description: 'Usa este menú (icono de 3 puntos) para Editar, Asignar Rol, Resetear Contraseña o Eliminar un usuario específico.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-pagination',
+                popover: {
+                    title: '📄 Paginación y Controles',
+                    description: 'Navega entre las páginas y ajusta la cantidad de registros que deseas ver por página (10, 50, 100).',
+                    side: 'top',
+                    align: 'end',
+                },
+            },
+        ],
+    });
+
+    driverObj.drive();
+};
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -267,7 +336,7 @@ function userRoleIcon(role: UserRole): string | null {
                 description="Manage users and their roles"
             />
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div class="relative w-full sm:w-72">
+                <div class="relative w-full sm:w-72" id="tour-search">
                     <Search
                         class="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                     />
@@ -278,6 +347,7 @@ function userRoleIcon(role: UserRole): string | null {
                         class="pl-8"
                     />
                 </div>
+                <div id="tour-filter">
                 <Select v-model="roleFilter">
                     <SelectTrigger class="w-full sm:w-40">
                         <SelectValue placeholder="All roles" />
@@ -293,9 +363,13 @@ function userRoleIcon(role: UserRole): string | null {
                         </SelectItem>
                     </SelectContent>
                 </Select>
+                </div>
+                <Button variant="outline" size="icon"  @click="startTour" title="Guía del módulo">
+                    <HelpCircle class="h-4 w-4" />
+                </Button>
                 <Sheet v-model:open="open">
                     <SheetTrigger as-child>
-                        <Button>
+                        <Button id="tour-new-btn">
                             <Plus class="h-4 w-4" />
                             New User
                         </Button>
@@ -493,14 +567,14 @@ function userRoleIcon(role: UserRole): string | null {
             </AlertDescription>
         </Alert>
 
-        <div class="min-h-0 flex-1 overflow-auto rounded-md border">
+        <div class="min-h-0 flex-1 overflow-auto rounded-md border" id="tour-table">
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50">
                     <tr>
                         <th class="px-4 py-3 font-medium">Name</th>
                         <th class="px-4 py-3 font-medium">Email</th>
                         <th class="px-4 py-3 font-medium">Role</th>
-                        <th class="px-4 py-3 text-right font-medium">
+                        <th class="px-4 py-3 text-right font-medium" id="tour-actions">
                             Actions
                         </th>
                     </tr>
@@ -594,7 +668,7 @@ function userRoleIcon(role: UserRole): string | null {
         </div>
 
         <div
-            class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+            class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between" id="tour-pagination"
         >
             <div class="text-sm text-muted-foreground">
                 Showing {{ items.from }} to {{ items.to }} of
