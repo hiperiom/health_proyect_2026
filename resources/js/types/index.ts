@@ -11,10 +11,5 @@ export * from './medicalespecialties';
 
 export * from './patients';
 export * from './doctors';
-export * from './appointments';
-export * from './insurances';
-export * from './bills';
-export * from './categories';
-export * from './specialties';
-export * from './regions';
-export * from './towns';
+
+export * from './countries';

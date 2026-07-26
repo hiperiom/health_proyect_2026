@@ -13,8 +13,10 @@ export type BreadcrumbItem = {
     href: string;
 };
 
-export type NavItem = {
+export interface NavItem {
     title: string;
-    href: string;
-    icon?: unknown;
-};
+    href?: string;
+    icon?: any;
+    isActive?: boolean;
+    items?: NavItem[]; // <- Agrega esta línea si no existía
+}

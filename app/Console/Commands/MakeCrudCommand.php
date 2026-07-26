@@ -9,12 +9,17 @@ use Illuminate\Support\Str;
 
 class MakeCrudCommand extends Command
 {
-    protected $signature = 'make:crud {name : The singular model name (PascalCase)} 
-                        {--migrate : Run standard migration} 
-                        {--fresh : Run migrate:fresh --seed automatically without asking} 
-                        {--rundev : Run composer run dev automatically} 
-                        {--test : Run backend tests and frontend build} 
-                        {--skip-test : Skip running tests}';
+    protected $signature = 'make:crud 
+                    {name : The singular model name (PascalCase)} 
+                    {--sidebar-name= : Nombre que se verá en el sidebar (Default: PluralUpper)} 
+                    {--module-title= : Título del módulo arriba de la descripción (Default: PluralUpper)} 
+                    {--module-description= : Texto debajo del título del módulo (Default: Gestión y administración de...)} 
+                    {--new-button-text= : Texto del botón de nuevo registro, singular y capitalizado (Default: New Model)}
+                    {--migrate : Run standard migration} 
+                    {--fresh : Run migrate:fresh --seed automatically without asking} 
+                    {--rundev : Run composer run dev automatically} 
+                    {--test : Run backend tests and frontend build} 
+                    {--skip-test : Skip running tests}';
     protected $description = 'Generate a full CRUD (backend + frontend Inertia/Vue) following SOLID principles.';
 
     
@@ -29,6 +34,12 @@ class MakeCrudCommand extends Command
         $plural = Str::of($model)->plural()->lower()->toString();
         $pluralUpper = Str::of($plural)->ucfirst()->toString();
         $timestamp = date('Y_m_d_His');
+
+        // Nuevas variables con valores por defecto si no se proporcionan las opciones
+        $sidebarName = $this->option('sidebar-name') ?: $pluralUpper;
+        $moduleTitle = $this->option('module-title') ?: $pluralUpper;
+        $moduleDescription = $this->option('module-description') ?: "Gestión y administración de {$plural}.";
+        $newButtonText = $this->option('new-button-text') ?: "New {$model}";
 
         $this->info("Generating CRUD for: {$model} ({$plural})");
 
@@ -45,12 +56,11 @@ class MakeCrudCommand extends Command
         $this->updateWebRoutes($plural, $model);
 
         // Frontend Generation
-        $this->createTypeScriptTypes($model, $plural);
-        $this->createWayfinderRoutes($plural);
-        $this->createIndexPage($model, $plural, $pluralUpper);
+        // Pasar las nuevas variables a los métodos
+        $this->createIndexPage($model, $plural, $pluralUpper, $sidebarName, $moduleTitle, $moduleDescription, $newButtonText);
         $this->updateTypeScriptIndex($plural);
         $this->updateTypeScriptRoutesIndex($plural);
-        $this->addSidebarNavigation($plural, $model, $pluralUpper);
+        $this->addSidebarNavigation($plural, $model, $pluralUpper, $sidebarName);
 
         $this->newLine();
         $wantsFresh = $this->option('fresh');
@@ -449,10 +459,9 @@ TS;
         File::put($path, $content);
     }
 
-    protected function createIndexPage(string $model, string $plural, string $pluralUpper): void
+      protected function createIndexPage(string $model, string $plural, string $pluralUpper, string $sidebarName, string $moduleTitle, string $moduleDescription, string $newButtonText): void
     {
         $pluralLower = Str::of($pluralUpper)->lower();
-        $this->info($pluralUpper.'-'.$pluralLower);
         $dir = resource_path("js/pages/{$pluralLower}");
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/Index.vue";
@@ -460,74 +469,11 @@ TS;
 
         $content = <<<'VUE'
 <script setup lang="ts">
-import { Form, Head, router, usePage } from '@inertiajs/vue3';
-import { CircleCheck, MoreVertical, Pencil, Plus, Search, Trash } from '@lucide/vue';
-import { ref, watch } from 'vue';
-import Heading from '@/components/Heading.vue';
-import InputError from '@/components/InputError.vue';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { index, store, update, destroy } from '@/routes/{models}';
-import type { {Model} } from '@/types/{models}';
-
-const page = usePage();
-
-type Props = {
-    items: {
-        data: {Model}[];
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-        from: number;
-        to: number;
-    };
-    filters?: { search?: string; per_page?: number; };
-};
-
-const props = withDefaults(defineProps<Props>(), {});
-const open = ref(false);
-const editingItem = ref<{Model} | null>(null);
-const deleteDialogOpen = ref(false);
-const itemToDelete = ref<{Model} | null>(null);
-const search = ref<string>(props.filters?.search ?? '');
-const perPage = ref<string>(props.filters?.per_page && [10, 25, 50, 100].includes(props.filters.per_page) ? String(props.filters.per_page) : '10');
-
-let searchDebounce: ReturnType<typeof setTimeout> | null = null;
-
-function applyFilters() {
-    const query: Record<string, string | number> = { page: 1 };
-    if (search.value.trim() !== '') query.search = search.value;
-    if (perPage.value !== '10') query.per_page = perPage.value;
-    router.get(index().url, query, { preserveState: true, replace: true, preserveScroll: true });
-}
-
-watch(search, () => {
-    if (searchDebounce) clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => applyFilters(), 300);
-});
-watch(perPage, () => applyFilters());
-
-function openEditSheet(item: {Model}) { editingItem.value = item; open.value = true; }
-function confirmDelete(item: {Model}) { itemToDelete.value = item; deleteDialogOpen.value = true; }
-function deleteItem() {
-    if (!itemToDelete.value) return;
-    router.delete(destroy(itemToDelete.value.id), {
-        preserveScroll: true,
-        onSuccess: () => { deleteDialogOpen.value = false; itemToDelete.value = null; },
-    });
-}
-function closeSheet() { open.value = false; editingItem.value = null; }
+// ... (mantén todo el script setup igual hasta el template) ...
 </script>
 
 <template>
-    <Head title="{pluralUpper}" />
+    <Head title="{SidebarName}" />
     <div class="flex h-full flex-col space-y-6">
         <Alert v-if="page.props.flash?.toast?.type === 'success'" variant="default" class="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
             <CircleCheck class="h-4 w-4" />
@@ -536,15 +482,18 @@ function closeSheet() { open.value = false; editingItem.value = null; }
         </Alert>
 
         <div class="flex flex-col gap-4 px-3 sm:flex-row sm:items-center sm:justify-between">
-            <Heading variant="small" title="{pluralUpper}" description="Gestión y administración de {plural}." />
+            <Heading variant="small" title="{ModuleTitle}" description="{ModuleDescription}" />
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div class="relative w-full sm:w-72">
-                    <Search class="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input v-model="search" type="search" placeholder="Search by name..." class="pl-8" />
+                <div class="relative w-full sm:w-72" id="tour-search">
+                    <Search class="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"  />
+                    <Input v-model="search" type="search" placeholder="Search by {ModuleTitle}..." class="pl-8" />
                 </div>
+                <Button variant="outline" size="icon" @click="startTour" title="Guía del módulo">
+                    <HelpCircle class="h-4 w-4" />
+                </Button>
                 <Sheet v-model:open="open">
-                    <SheetTrigger as-child>
-                        <Button @click="editingItem = null"><Plus class="h-4 w-4 mr-2" /> New {Model}</Button>
+                    <SheetTrigger as-child id="tour-new-btn">
+                        <Button @click="editingItem = null"><Plus class="h-4 w-4 mr-2" /> {NewButtonText}</Button>
                     </SheetTrigger>
                     <SheetContent>
                         <SheetHeader>
@@ -552,22 +501,25 @@ function closeSheet() { open.value = false; editingItem.value = null; }
                             <SheetDescription>{{ editingItem ? 'Update' : 'Create a new' }} {model} record.</SheetDescription>
                         </SheetHeader>
                         <Form :key="editingItem?.id ?? 'create'" v-bind="editingItem ? update.form(editingItem.id) : store.form()" class="space-y-6 px-4 mt-4" v-slot="{ errors, processing }" @success="closeSheet">
-                            <div class="grid gap-2">
-                                <Label for="name">Name</Label>
-                                <Input id="name" name="name" :default-value="editingItem?.name" placeholder="{Model} name" required />
-                                <InputError :message="errors.name" />
+                            <div id="tour-form" >
+                                <div class="grid gap-2">
+                                    <Label for="name">Name</Label>
+                                    <Input id="name" name="name" :default-value="editingItem?.name" placeholder="{Model} name" required />
+                                    <InputError :message="errors.name" />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="description">Description</Label>
+                                    <Input id="description" name="description" :default-value="editingItem?.description" placeholder="Description" />
+                                    <InputError :message="errors.description" />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="value">Value</Label>
+                                    <Input id="value" name="value" :default-value="editingItem?.value" placeholder="Value" />
+                                    <InputError :message="errors.value" />
+                                </div>
                             </div>
-                            <div class="grid gap-2">
-                                <Label for="description">Description</Label>
-                                <Input id="description" name="description" :default-value="editingItem?.description" placeholder="Description" />
-                                <InputError :message="errors.description" />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="value">Value</Label>
-                                <Input id="value" name="value" :default-value="editingItem?.value" placeholder="Value" />
-                                <InputError :message="errors.value" />
-                            </div>
-                            <SheetFooter>
+
+                            <SheetFooter id="tour-sheet-footer">
                                 <SheetClose as-child><Button variant="secondary">Cancel</Button></SheetClose>
                                 <Button type="submit" :disabled="processing">{{ editingItem ? 'Update' : 'Create' }}</Button>
                             </SheetFooter>
@@ -577,83 +529,28 @@ function closeSheet() { open.value = false; editingItem.value = null; }
             </div>
         </div>
 
-        <Dialog :open="deleteDialogOpen" @update:open="(v) => (deleteDialogOpen = v)">
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete {Model}</DialogTitle>
-                    <DialogDescription>Are you sure you want to delete "{{ itemToDelete?.name }}"? This action cannot be undone.</DialogDescription>
-                </DialogHeader>
-                <DialogFooter class="gap-2">
-                    <DialogClose as-child><Button variant="secondary">Cancel</Button></DialogClose>
-                    <Button variant="destructive" @click="deleteItem">Delete</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        // ... (mantén el Dialog y la Tabla igual, solo cambia el mensaje de vacío abajo) ...
 
-        <div class="min-h-0 flex-1 overflow-auto rounded-md border">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-muted/50">
-                    <tr>
-                        <th class="px-4 py-3 font-medium">ID</th>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Description</th>
-                        <th class="px-4 py-3 font-medium">Value</th>
-                        <th class="px-4 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in items.data" :key="item.id" class="border-t">
-                        <td class="px-4 py-3">{{ item.id }}</td>
-                        <td class="px-4 py-3 font-medium">{{ item.name }}</td>
-                        <td class="px-4 py-3">{{ item.description }}</td>
-                        <td class="px-4 py-3">{{ item.value }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <div class="flex items-center justify-end">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger as-child>
-                                        <Button variant="ghost" size="sm" aria-label="Actions"><MoreVertical class="h-4 w-4" /></Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem @click="openEditSheet(item)"><Pencil class="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                        <DropdownMenuItem @click="confirmDelete(item)"><Trash class="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </td>
-                    </tr>
                     <tr v-if="!items.data.length">
-                        <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No {plural} found.</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-muted-foreground">No {ModuleTitle} found.</td>
                     </tr>
-                </tbody>
-            </table>
-        </div>
 
-        <div class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="text-sm text-muted-foreground">Showing {{ items.from }} to {{ items.to }} of {{ items.total }} results.</div>
-            <div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                <div class="flex items-center gap-2">
-                    <span class="text-sm text-muted-foreground">Per page</span>
-                    <Select v-model="perPage">
-                        <SelectTrigger class="w-20"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="10">10</SelectItem><SelectItem value="25">25</SelectItem>
-                            <SelectItem value="50">50</SelectItem><SelectItem value="100">100</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <Button variant="outline" size="sm" :disabled="items.current_page === 1" @click="router.get(index().url, { ...filters, page: items.current_page - 1 }, { preserveState: true, preserveScroll: true })">Previous</Button>
-                    <Button variant="outline" size="sm" :disabled="items.current_page === items.last_page" @click="router.get(index().url, { ...filters, page: items.current_page + 1 }, { preserveState: true, preserveScroll: true })">Next</Button>
-                </div>
-            </div>
-        </div>
+        // ... (mantén la paginación igual hasta el cierre del template) ...
     </div>
 </template>
 VUE;
 
         $replacements = [
-            '{Model}' => $model, '{model}' => strtolower($model), '{Models}' => $pluralUpper,
-            '{models}' => $plural, '{pluralUpper}' => $pluralUpper, '{plural}' => $plural,
+            '{Model}' => $model, 
+            '{model}' => strtolower($model), 
+            '{Models}' => $pluralUpper,
+            '{models}' => $plural, 
+            '{pluralUpper}' => $pluralUpper, 
+            '{plural}' => $plural,
+            '{SidebarName}' => $sidebarName,
+            '{ModuleTitle}' => $moduleTitle,
+            '{ModuleDescription}' => $moduleDescription,
+            '{NewButtonText}' => $newButtonText,
         ];
         $content = str_replace(array_keys($replacements), array_values($replacements), $content);
         File::put($path, $content);
@@ -677,7 +574,7 @@ VUE;
         if (!Str::contains($content, $line)) File::append($path, PHP_EOL.$line);
     }
     
-    protected function addSidebarNavigation(string $plural, string $model, string $pluralUpper): void
+       protected function addSidebarNavigation(string $plural, string $model, string $pluralUpper, string $sidebarName): void
     {
         $path = resource_path('js/components/AppSidebar.vue');
         if (!File::exists($path)) {
@@ -687,9 +584,9 @@ VUE;
         
         $content = File::get($path);
         
-        // 1. Verificar si ya fue agregado para evitar duplicados
-        if (Str::contains($content, "title: '{$pluralUpper}'")) {
-            $this->warn("Navigation item for '{$pluralUpper}' already exists in AppSidebar.vue");
+        // 1. Verificar si ya fue agregado para evitar duplicados (usando el nombre personalizado)
+        if (Str::contains($content, "title: '{$sidebarName}'")) {
+            $this->warn("Navigation item for '{$sidebarName}' already exists in AppSidebar.vue");
             return;
         }
 
@@ -714,16 +611,15 @@ VUE;
         }
 
         // 4. Inyección segura del nuevo ítem del menú después de 'Dashboard' usando Regex
-        // Esto busca el objeto del Dashboard sin importar los espacios o saltos de línea exactos
         $pattern = "/(\{\s*title:\s*['\"]Dashboard['\"],\s*href:\s*dashboardUrl\.value,\s*icon:\s*LayoutGrid,\s*\},)/";
-        $replacement = "\$1\n        {\n            title: '{$pluralUpper}',\n            href: {$plural}Index().url,\n            icon: {$icon},\n        },";
+        $replacement = "\$1\n        {\n            title: '{$sidebarName}',\n            href: {$plural}Index().url,\n            icon: {$icon},\n        },";
         
         if (preg_match($pattern, $content)) {
             $content = preg_replace($pattern, $replacement, $content);
             File::put($path, $content);
             $this->info("Updated: {$path}");
         } else {
-            $this->warn("Could not find the 'Dashboard' menu item structure to append to. Please add the '{$pluralUpper}' navigation item manually.");
+            $this->warn("Could not find the 'Dashboard' menu item structure to append to. Please add the '{$sidebarName}' navigation item manually.");
         }
     }
 }
