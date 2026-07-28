@@ -34,7 +34,7 @@ import { index as permissionsIndex } from '@/routes/permissions';
 import { index as rolesIndex } from '@/routes/roles';
 import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
-import { index as countriesIndex } from '@/routes/countries';
+
 
 type AuthUser = {
     id: number;
@@ -108,22 +108,18 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: dashboardUrl.value,
             icon: LayoutGrid,
         },
-        {
-            title: 'Paises',
-            href: countriesIndex().url,
-            icon: FileText,
-        },
+        
         
     ];
     // --- OPCIÓN DESPLEGABLE CON SUBMENÚS ---
     const geographicalLocation: NavItem[] = [];
 
     if (canUsers.value) {
-        geographicalLocation.push({
+        /*geographicalLocation.push({
             title: 'Countries',
             href: countriesIndex().url,
             icon: FileText,
-        });
+        });*/
     }
 
     if (geographicalLocation.length > 0) {
