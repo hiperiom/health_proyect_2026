@@ -14,7 +14,7 @@ use App\Http\Controllers\Users\UserController;
 use App\Http\Middleware\EnsureRoleSelection;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified', EnsureRoleSelection::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
