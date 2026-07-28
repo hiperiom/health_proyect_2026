@@ -1,1 +1,60 @@
 -- Todas las respuestas en el chat deben ser en español.
+
+-- Reglas y patrones del comando make:crud
+
+-- Convenciones de nomenclatura obligatorias al generar CRUDs
+-- Modelo: PascalCase singular (MedicalSpecialty)
+-- Plural: PascalCase plural (MedicalSpecialties)
+-- Rutas/archivos: kebab-case (medical-specialties)
+-- Tabla DB: snake_case (medical_specialties)
+-- Controlador: App\Http\Controllers\{Plural}\{Plural}Controller.php
+-- Servicio: App\Services\{Singular}\{Singular}Service.php
+-- Recurso API: App\Http\Resources\{Singular}\{Singular}Resource.php
+-- Requests: App\Http\Requests\{Singular}\Store\Singular}Request.php y Update\{Singular}Request.php
+-- Policy: App\Policies\{Singular}Policy.php
+-- Página Vue: resources/js/pages/{kebab-case}/Index.vue
+-- Tipos TS: resources/js/types/{kebab-case}.ts
+-- Rutas Wayfinder: resources/js/routes/{kebab-case}/index.ts
+
+-- Arquitectura backend: Service Layer + Form Requests + API Resources + Policies
+-- Controladores usan constructor injection del servicio correspondiente
+-- Recursos JsonResource exponen: id, name, description, value, createdAt, updatedAt
+-- Services implementan: getList(filters) con paginación y búsqueda en name, store, update, destroy
+-- Routes web agrupadas bajo middleware auth y verified con named routes {kebab-case}.{action}
+-- Políticas por defecto retornan true en viewAny, create, update, delete
+
+-- Frontend Inertia/Vue
+-- Usar deferred props con fn() para items en Inertia::render
+-- Usar Laravel Wayfinder para rutas type-safe importadas desde @/routes/{kebab-case}
+-- Componentes UI: shadcn/ui (Alert, Button, Dialog, DropdownMenu, Input, Label, Select, Sheet)
+-- Iconos: lucide/vue
+-- Mensajes flash: Inertia::flash('toast', ['type' => 'success', 'message' => __('...')])
+-- Páginas Index.vue incluyen tour guiado con driver.js, búsqueda con debounce, paginación y sheet para crear/editar
+
+-- Tipado TypeScript
+-- Exportar tipo {Singular} en resources/js/types/{table}.ts
+-- Actualizar resources/js/types/index.ts con export * from './{table}'
+-- Actualizar resources/js/routes/index.ts con import {kebab} from './{kebab-case}'
+
+-- Sidebar
+-- Agregar ítem de navegación en AppSidebar.vue con título plural, icono FileText por defecto e href desde ruta Wayfinder
+-- Inyectar importación de ruta y icono sin duplicados
+
+-- Comportamiento make:crud
+-- Ejecuta migrate:fresh --seed automáticamente sin prompt
+-- Ejecuta wayfinder:generate --with-form después de generar archivos
+-- composer run dev se ejecuta automáticamente a menos que se indique lo contrario
+-- No sobrescribir archivos existentes (verificar File::exists antes de crear)
+
+-- Reglas de campos generados por defecto
+-- Migración: name (string), description (text nullable), value (string nullable), timestamps
+-- Form Request rules: name required string max:255, description nullable string, value nullable string max:255
+-- Factory: faker->company(), faker->sentence(), faker->randomFloat(2, 10, 1000)
+-- Seeder: factory()->count(50)->create()
+
+-- Estándares Laravel 13 y PHP 8.3
+-- Usar constructor property promotion en controladores y servicios
+-- Usar named routes y to_route() para redirects
+-- Usar return type declarations estrictos
+-- Usar llaves en estructuras de control aunque sean de una línea
+-- Prefijo de grupos de rutas debe coincidir con el kebab-case del modelo
