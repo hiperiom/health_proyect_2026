@@ -17,6 +17,7 @@ import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
+import RoleSwitcher from '@/components/RoleSwitcher.vue';
 import {
     Sidebar,
     SidebarContent,
@@ -33,8 +34,8 @@ import { index as patientsIndex } from '@/routes/patients';
 import { index as permissionsIndex } from '@/routes/permissions';
 import { index as rolesIndex } from '@/routes/roles';
 import { index as usersIndex } from '@/routes/users';
+import type { RoleModel } from '@/types';
 import type { NavItem } from '@/types';
-
 
 type AuthUser = {
     id: number;
@@ -45,10 +46,19 @@ type AuthUser = {
     permissions: string[];
 };
 
+type Auth = {
+    user: AuthUser | null;
+    roles: RoleModel[];
+    activeRole: {
+        id: number | null;
+        name: string | null;
+        slug: string | null;
+    } | null;
+    hasMultipleRoles: boolean;
+};
+
 type PageProps = {
-    auth: {
-        user: AuthUser | null;
-    };
+    auth: Auth;
 };
 
 const page = usePage<PageProps>();
@@ -108,8 +118,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: dashboardUrl.value,
             icon: LayoutGrid,
         },
-        
-        
     ];
     // --- OPCIÓN DESPLEGABLE CON SUBMENÚS ---
     const geographicalLocation: NavItem[] = [];
@@ -214,6 +222,7 @@ const footerNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
+            <RoleSwitcher />
             <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>

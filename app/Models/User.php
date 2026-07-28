@@ -27,12 +27,14 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property int|null $active_role_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Role> $roles
  * @property-read Collection<int, Permission> $permissions
+ * @property-read Role|null $activeRole
  */
-#[Fillable(['name', 'email', 'password', 'password_updated'])]
+#[Fillable(['name', 'email', 'password', 'password_updated', 'active_role_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -55,7 +57,19 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * The roles assigned to the user.
+     * Get the active role assigned to the user.
+     *
+     * @return BelongsToMany<Role>
+     */
+    public function activeRole(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'users_roles')
+            ->wherePivot('role_id', $this->active_role_id)
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the roles assigned to the user.
      *
      * @return BelongsToMany<Role>
      */
@@ -95,6 +109,18 @@ class User extends Authenticatable implements PasskeyUser
     public function patient(): HasMany
     {
         return $this->hasMany(Patients::class, 'user_id');
+    }
+
+    /**
+     * Get the user's active role.
+     */
+    public function getActiveRoleAttribute(): ?Role
+    {
+        if ($this->active_role_id !== null) {
+            return $this->roles->firstWhere('id', $this->active_role_id);
+        }
+
+        return $this->primaryRole();
     }
 
     /**

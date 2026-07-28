@@ -59,6 +59,7 @@ watch(
         if (value === undefined) {
             return;
         }
+
         photoUrl.value = value;
         emit('updated', value);
     },
@@ -111,6 +112,7 @@ function initCropper() {
         if (!cropImage.value) {
             return;
         }
+
         cropper.value = new Cropper(cropImage.value, {
             aspectRatio: 1,
             viewMode: 1,
@@ -129,9 +131,11 @@ function initCropper() {
 
 function destroyCropper() {
     const c = cropper.value as { destroy?: () => void } | null;
+
     if (c && typeof c.destroy === 'function') {
         c.destroy();
     }
+
     cropper.value = null;
 }
 
@@ -158,6 +162,7 @@ async function applyCrop() {
     const c = cropper.value as {
         getCroppedCanvas: (opts: object) => HTMLCanvasElement;
     } | null;
+
     if (!c) {
         return;
     }
@@ -242,6 +247,7 @@ function removePhoto() {
 
 onBeforeUnmount(() => {
     destroyCropper();
+
     if (previewSrc.value) {
         URL.revokeObjectURL(previewSrc.value);
     }

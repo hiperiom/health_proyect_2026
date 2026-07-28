@@ -8,13 +8,19 @@ use App\Http\Controllers\Patients\PatientPhotoController;
 use App\Http\Controllers\Patients\PatientsController;
 use App\Http\Controllers\Permissions\PermissionController;
 use App\Http\Controllers\Roles\RoleController;
+use App\Http\Controllers\RoleSelectionController;
+use App\Http\Controllers\SwitchRoleController;
 use App\Http\Controllers\Users\UserController;
+use App\Http\Middleware\EnsureRoleSelection;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', EnsureRoleSelection::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('role-selection', [RoleSelectionController::class, 'index'])->name('role.selection');
+    Route::post('role-selection', [RoleSelectionController::class, 'store'])->name('role.selection.store');
+    Route::post('switch-role', SwitchRoleController::class)->name('switch-role');
 });
 
 require __DIR__.'/settings.php';

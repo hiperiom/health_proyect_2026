@@ -87,10 +87,12 @@ const availablePermissions = computed<PermissionOption[]>(
 
 const groupedPermissions = computed<Record<string, PermissionOption[]>>(() => {
     const map: Record<string, PermissionOption[]> = {};
+
     for (const permission of availablePermissions.value) {
         if (!map[permission.module]) {
             map[permission.module] = [];
         }
+
         map[permission.module].push(permission);
     }
 
@@ -102,11 +104,13 @@ const permissionSearch = ref<string>('');
 const filteredGroupedPermissions = computed<Record<string, PermissionOption[]>>(
     () => {
         const search = permissionSearch.value.trim().toLowerCase();
+
         if (search === '') {
             return groupedPermissions.value;
         }
 
         const result: Record<string, PermissionOption[]> = {};
+
         for (const [module, perms] of Object.entries(
             groupedPermissions.value,
         )) {
@@ -122,6 +126,7 @@ const filteredGroupedPermissions = computed<Record<string, PermissionOption[]>>(
                     p.slug.toLowerCase().includes(search) ||
                     (p.description ?? '').toLowerCase().includes(search),
             );
+
             if (matching.length > 0) {
                 result[module] = matching;
             }
@@ -216,6 +221,7 @@ function openAssignPermissions(
 
 function togglePermission(id: number) {
     const idx = selectedPermissionIds.value.indexOf(id);
+
     if (idx >= 0) {
         selectedPermissionIds.value.splice(idx, 1);
     } else {

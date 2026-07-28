@@ -78,8 +78,15 @@ let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
 function applyFilters() {
     const query: Record<string, string | number> = { page: 1 };
-    if (search.value.trim() !== '') query.search = search.value;
-    if (perPage.value !== '10') query.per_page = perPage.value;
+
+    if (search.value.trim() !== '') {
+query.search = search.value;
+}
+
+    if (perPage.value !== '10') {
+query.per_page = perPage.value;
+}
+
     router.get(index().url, query, {
         preserveState: true,
         replace: true,
@@ -88,7 +95,10 @@ function applyFilters() {
 }
 
 watch(search, () => {
-    if (searchDebounce) clearTimeout(searchDebounce);
+    if (searchDebounce) {
+clearTimeout(searchDebounce);
+}
+
     searchDebounce = setTimeout(() => applyFilters(), 300);
 });
 watch(perPage, () => applyFilters());
@@ -102,7 +112,10 @@ function confirmDelete(item: ModuleModel) {
     deleteDialogOpen.value = true;
 }
 function deleteItem() {
-    if (!itemToDelete.value) return;
+    if (!itemToDelete.value) {
+return;
+}
+
     router.delete(destroy(itemToDelete.value.id), {
         preserveScroll: true,
         onSuccess: () => {

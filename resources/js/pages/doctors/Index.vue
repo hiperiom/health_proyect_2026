@@ -55,7 +55,10 @@ function confirmDelete(item: Doctor) {
 }
 
 function deleteItem() {
-    if (!itemToDelete.value) return;
+    if (!itemToDelete.value) {
+return;
+}
+
     router.delete(destroy(itemToDelete.value.id), {
         preserveScroll: true,
         onSuccess: () => {

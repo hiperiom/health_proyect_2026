@@ -73,6 +73,8 @@ class RoleController extends Controller
 
     public function edit(Request $request, string $item): Response
     {
+        $role = Role::query()->findOrFail($item);
+
         return Inertia::render('roles/Index', [
             'item' => [
                 'id' => $role->id,

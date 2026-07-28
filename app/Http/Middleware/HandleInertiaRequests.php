@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,7 +36,17 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        /** @var User|null $user */
         $user = $request->user();
+
+        $roles = $user?->roles()->get(['id', 'name', 'slug', 'color_class', 'text_class', 'icon_svg'])->map(fn ($role) => [
+            'id' => $role->id,
+            'name' => $role->name,
+            'slug' => $role->slug,
+            'color_class' => $role->color_class,
+            'text_class' => $role->text_class,
+            'icon_svg' => $role->icon_svg,
+        ])->values()->all() ?? [];
 
         return [
             ...parent::share($request),
@@ -49,6 +60,13 @@ class HandleInertiaRequests extends Middleware
                     'roleName' => $user->primaryRole()?->name,
                     'permissions' => $user->permissionSlugs(),
                 ] : null,
+                'roles' => $roles,
+                'activeRole' => $user ? [
+                    'id' => $user->active_role_id,
+                    'name' => $user->activeRole?->name,
+                    'slug' => $user->activeRole?->slug,
+                ] : null,
+                'hasMultipleRoles' => (bool) (count($roles) > 1),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
