@@ -6,7 +6,7 @@ import {
     Check,
     ClipboardList,
     Crown,
-    Gear,
+    Cog,
     Heart,
     LogOut,
     Stethoscope,
@@ -79,8 +79,16 @@ const roleOptions: RoleOption[] = [
         title: 'Administrador',
         description:
             'Configura el sistema, gestiona usuarios y supervisa la operación general',
-        icon: Heart,
+        icon: Cog,
         iconBg: 'bg-orange-100 text-orange-700',
+    },
+    {
+        slug: 'superusuario',
+        title: 'Superusuario',
+        description:
+            'Control total del sistema, gestión de roles, permisos y configuración avanzada',
+        icon: Crown,
+        iconBg: 'bg-amber-100 text-amber-700',
     },
 ];
 
