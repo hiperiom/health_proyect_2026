@@ -16,8 +16,10 @@ defineProps<{
 
 defineOptions({
     layout: {
-        title: 'Create an account',
-        description: 'Enter your details below to create your account',
+        title: 'Crear cuenta',
+        description: 'Completa tus datos para crear tu cuenta',
+        brandingTitle: 'Bienvenido a tu centro de salud digital',
+        brandingSubtitle: 'Gestiona tus citas, historial médico y seguimiento de salud todo en un solo lugar.',
     },
 });
 </script>
@@ -33,7 +35,7 @@ defineOptions({
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="name">Name</Label>
+                <Label for="name" class="dark:text-slate-200">Nombre completo</Label>
                 <Input
                     id="name"
                     type="text"
@@ -42,73 +44,84 @@ defineOptions({
                     :tabindex="1"
                     autocomplete="name"
                     name="name"
-                    placeholder="Full name"
+                    placeholder="Tu nombre completo"
+                    class="bg-slate-100 dark:bg-slate-700 dark:text-slate-100"
                 />
                 <InputError :message="errors.name" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
-                <Input
-                    id="email"
-                    type="email"
-                    required
-                    :tabindex="2"
-                    autocomplete="email"
-                    name="email"
-                    placeholder="email@example.com"
-                />
+                <Label for="email" class="dark:text-slate-200">Correo electrónico</Label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="16" x="2" y="4" rx="2" />
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                    </span>
+                    <Input
+                        id="email"
+                        type="email"
+                        required
+                        :tabindex="2"
+                        autocomplete="email"
+                        name="email"
+                        placeholder="tu@email.com"
+                        class="bg-slate-100 pl-10 dark:bg-slate-700 dark:text-slate-100"
+                    />
+                </div>
                 <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">Password</Label>
+                <Label for="password" class="dark:text-slate-200">Contraseña</Label>
                 <PasswordInput
                     id="password"
                     required
                     :tabindex="3"
                     autocomplete="new-password"
                     name="password"
-                    placeholder="Password"
+                    placeholder="••••••••"
                     :passwordrules="passwordRules"
+                    class="bg-slate-100 dark:bg-slate-700 dark:text-slate-100"
                 />
                 <InputError :message="errors.password" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">Confirm password</Label>
+                <Label for="password_confirmation" class="dark:text-slate-200">Confirmar contraseña</Label>
                 <PasswordInput
                     id="password_confirmation"
                     required
                     :tabindex="4"
                     autocomplete="new-password"
                     name="password_confirmation"
-                    placeholder="Confirm password"
+                    placeholder="••••••••"
                     :passwordrules="passwordRules"
+                    class="bg-slate-100 dark:bg-slate-700 dark:text-slate-100"
                 />
                 <InputError :message="errors.password_confirmation" />
             </div>
 
             <Button
                 type="submit"
-                class="mt-2 w-full"
+                class="mt-2 w-full bg-teal-600 hover:bg-teal-500 dark:bg-teal-500 dark:hover:bg-teal-400"
                 tabindex="5"
                 :disabled="processing"
                 data-test="register-user-button"
             >
                 <Spinner v-if="processing" />
-                Create account
+                Crear cuenta
             </Button>
         </div>
 
-        <div class="text-center text-sm text-muted-foreground">
-            Already have an account?
+        <div class="text-center text-sm text-slate-600 dark:text-slate-300">
+            ¿Ya tienes cuenta?
             <TextLink
                 :href="login()"
-                class="underline underline-offset-4"
-                :tabindex="6"
+                class="text-teal-600 hover:text-teal-500 dark:text-teal-400"
             >
-                Log in
+                Inicia sesión aquí
             </TextLink>
         </div>
     </Form>
