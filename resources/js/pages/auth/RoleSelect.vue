@@ -125,16 +125,16 @@ function handleLogout(): void {
 <template>
     <Head title="Selecciona tu rol" />
 
-    <div class="relative min-h-svh overflow-hidden bg-slate-50">
+    <div class="relative min-h-svh overflow-hidden bg-background">
         <div class="pointer-events-none absolute inset-0">
             <div
-                class="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/40 blur-3xl"
+                class="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-emerald-200/40 blur-3xl dark:bg-emerald-900/20"
             ></div>
             <div
-                class="absolute top-10 right-0 h-64 w-64 rounded-full bg-cyan-200/40 blur-3xl"
+                class="absolute top-10 right-0 h-64 w-64 rounded-full bg-cyan-200/40 blur-3xl dark:bg-cyan-900/20"
             ></div>
             <div
-                class="absolute -bottom-20 left-10 h-72 w-72 rounded-full bg-teal-200/40 blur-3xl"
+                class="absolute -bottom-20 left-10 h-72 w-72 rounded-full bg-teal-200/40 blur-3xl dark:bg-teal-900/20"
             ></div>
         </div>
 
@@ -161,16 +161,16 @@ function handleLogout(): void {
                                 />
                             </svg>
                         </span>
-                        <span class="text-2xl font-bold text-slate-800"
+                        <span class="text-2xl font-bold text-slate-800 dark:text-slate-100"
                             >MedicalApp</span
                         >
                     </div>
 
-                    <h1 class="text-3xl font-bold text-slate-900">
-                        Selecciona tu <span class="text-emerald-600">rol</span>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                        Selecciona tu <span class="text-emerald-600 dark:text-emerald-400">rol</span>
                     </h1>
 
-                    <p class="text-base text-slate-500">
+                    <p class="text-base text-slate-500 dark:text-slate-400">
                         Elige cómo accederás al sistema para personalizar tu
                         experiencia
                     </p>
@@ -183,31 +183,31 @@ function handleLogout(): void {
                         >
                             <Check class="h-4 w-4" />
                         </span>
-                        <span class="text-xs font-medium text-emerald-700"
+                        <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300"
                             >Login</span
                         >
                     </div>
 
-                    <div class="h-px flex-1 bg-slate-200"></div>
+                    <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
 
                     <div class="flex flex-col items-center gap-1">
                         <span
-                            class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white"
+                            class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-600 text-white dark:bg-teal-500"
                         >
                             2
                         </span>
-                        <span class="text-xs font-bold text-teal-700">Rol</span>
+                        <span class="text-xs font-bold text-teal-700 dark:text-teal-300">Rol</span>
                     </div>
 
-                    <div class="h-px flex-1 bg-slate-200"></div>
+                    <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
 
                     <div class="flex flex-col items-center gap-1">
                         <span
-                            class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600"
+                            class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                         >
                             3
                         </span>
-                        <span class="text-xs font-medium text-slate-500"
+                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400"
                             >Dashboard</span
                         >
                     </div>
@@ -221,9 +221,9 @@ function handleLogout(): void {
                             v-for="role in roles"
                             :key="role.id"
                             type="button"
-                            class="flex flex-col items-start gap-3 rounded-2xl border bg-white p-5 text-left shadow-sm transition hover:border-emerald-300 hover:shadow-md"
+                            class="flex flex-col items-start gap-3 rounded-2xl border bg-white p-5 text-left shadow-sm transition hover:border-emerald-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-emerald-600"
                             :class="{
-                                'border-emerald-500 bg-emerald-50/60 shadow-md ring-1 ring-emerald-500':
+                                'border-emerald-500 bg-emerald-50/60 shadow-md ring-1 ring-emerald-500 dark:border-emerald-400 dark:bg-emerald-950/60 dark:ring-emerald-400':
                                     selectedRoleId === role.id,
                             }"
                             @click="selectRole(role.id)"
@@ -235,7 +235,7 @@ function handleLogout(): void {
                                         roleOptions.find(
                                             (r) => r.slug === role.slug,
                                         )?.iconBg ??
-                                        'bg-slate-100 text-slate-700'
+                                        'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                                     "
                                 >
                                     <component
@@ -249,10 +249,10 @@ function handleLogout(): void {
                                 </span>
 
                                 <div class="flex flex-col">
-                                    <span class="font-semibold text-slate-900">
+                                    <span class="font-semibold text-slate-900 dark:text-slate-100">
                                         {{ role.name }}
                                     </span>
-                                    <span class="text-sm text-slate-500">
+                                    <span class="text-sm text-slate-500 dark:text-slate-400">
                                         {{
                                             roleOptions.find(
                                                 (r) => r.slug === role.slug,
@@ -268,7 +268,7 @@ function handleLogout(): void {
                         <button
                             type="button"
                             :disabled="selectedRoleId === null"
-                            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+                            class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                             @click="submitSelection"
                         >
                             Continuar
@@ -278,7 +278,7 @@ function handleLogout(): void {
                         <Button
                             type="button"
                             variant="ghost"
-                            class="text-sm text-muted-foreground hover:text-slate-700"
+                            class="text-sm text-muted-foreground hover:text-slate-700 dark:hover:text-slate-300"
                             @click="handleLogout"
                         >
                             <LogOut class="mr-2 h-4 w-4" />
