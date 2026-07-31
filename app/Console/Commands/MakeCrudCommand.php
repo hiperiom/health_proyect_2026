@@ -22,22 +22,10 @@ class MakeCrudCommand extends Command
         {--modelNameTable= : Nombre en minúscula unido por underscore}
         {--migrate : Run standard migration} 
         {--fresh : Run migrate:fresh --seed automatically without asking} 
-        {--rundev : Run composer run dev automatically}';
+        {--rundev : Run composer run dev automatically}
+        {--skip-tests : Omitir la ejecucion automatica de test:modules al final}';
 
     protected $description = 'Generate a full CRUD (backend + frontend Inertia/Vue) following SOLID principles.';
-    /*
-
-                            {name : The singular model name (PascalCase)}
-                            {--sidebar-name= : Nombre que se verá en el sidebar (Default: PluralUpper)}
-                            {--module-title= : Título del módulo arriba de la descripción (Default: PluralUpper)}
-                            {--module-description= : Texto debajo del título del módulo (Default: Gestión y administración de...)}
-                            {--new-button-text= : Texto del botón de nuevo registro, singular y capitalizado (Default: New Model)}
-
-
-
-                            {--test : Run backend tests and frontend build}
-                            {--skip-test : Skip running tests}
-    */
 
     public function handle(): void
     {
@@ -115,6 +103,20 @@ class MakeCrudCommand extends Command
             $this->info('Running migration...');
             $this->call('migrate');
         }
+        if (! $this->option('skip-tests')) {
+            $this->newLine();
+            $this->info('Ejecutando auditoria de tests criticos del modulo recien creado...');
+            // Invoke test:modules scoped to the module we just generated.
+            // We use --module= so only the new module is processed (much
+            // faster than running the suite for every registered module).
+            $this->call('test:modules', [
+                '--module' => [$config['modelNameKebabCase']],
+            ]);
+        } else {
+            $this->newLine();
+            $this->warn('Se omitio la ejecucion de test:modules (--skip-tests).');
+        }
+
         $runDev = $this->option('rundev') || true;
         if ($runDev) {
             $this->newLine();
@@ -135,26 +137,7 @@ class MakeCrudCommand extends Command
             $this->line('  <comment>composer run dev</comment>');
             $this->newLine();
         }
-        /*
-        $plural = Str::of($model)->plural()->lower()->toString();
-        $pluralUpper = Str::of($plural)->ucfirst()->toString();
 
-
-        $sidebarName = $this->option('sidebar-name') ?: $pluralUpper;
-        $moduleTitle = $this->option('module-title') ?: $pluralUpper;
-        $moduleDescription = $this->option('module-description') ?: "Gestión y administración de {$plural}.";
-        $newButtonText = $this->option('new-button-text') ?: "New {$model}";
-
-
-
-
-
-
-
-
-
-
-        */
     }
 
     /**
