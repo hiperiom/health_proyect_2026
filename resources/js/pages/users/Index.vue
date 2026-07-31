@@ -84,6 +84,7 @@ import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogClose,
@@ -124,6 +125,7 @@ import {
     update,
     destroy,
     resetPassword as resetPasswordRoute,
+    assignRoles as assignRolesRoute,
 } from '@/routes/users';
 import type { RoleOption, UserModel, UserRole } from '@/types/users';
 
@@ -172,7 +174,7 @@ const resetDialogOpen = ref(false);
 const itemToReset = ref<UserModel | null>(null);
 const assignRoleOpen = ref(false);
 const roleItem = ref<UserModel | null>(null);
-const selectedRole = ref<string>(availableRoles.value[0]?.value ?? '');
+const selectedRoleIds = ref<number[]>([]);
 const roleError = ref<string | null>(null);
 const search = ref<string>(props.filters?.search ?? '');
 const roleFilter = ref<string>(
@@ -224,13 +226,14 @@ watch(perPage, () => applyFilters());
 watch(
     () => page.props.errors,
     (errors: Record<string, string> | undefined) => {
-        roleError.value = errors?.role ?? null;
+        roleError.value = errors?.role_ids ?? null;
     },
     { immediate: true },
 );
 
 function openEditSheet(item: UserModel) {
     editingItem.value = item;
+    selectedRoleIds.value = item.role_ids ?? [];
     open.value = true;
 }
 
@@ -246,7 +249,7 @@ function confirmResetPassword(item: UserModel) {
 
 function openAssignRole(item: UserModel) {
     roleItem.value = item;
-    selectedRole.value = item.role ?? availableRoles.value[0]?.value ?? '';
+    selectedRoleIds.value = item.role_ids ?? [];
     assignRoleOpen.value = true;
 }
 
@@ -287,14 +290,22 @@ function assignRole() {
         return;
     }
 
+    roleError.value = null;
+
     router.patch(
-        update(roleItem.value.id),
-        { role: selectedRole.value },
+        assignRolesRoute(roleItem.value.id),
+        { role_ids: selectedRoleIds.value },
         {
             preserveScroll: true,
             onSuccess: () => {
                 assignRoleOpen.value = false;
                 roleItem.value = null;
+            },
+            onError: (errors: Record<string, string>) => {
+                roleError.value =
+                    errors?.role_ids ??
+                    Object.values(errors)[0] ??
+                    'No se pudieron guardar los roles.';
             },
         },
     );
@@ -425,31 +436,47 @@ function userRoleIcon(role: UserRole): string | null {
                                 <InputError :message="errors.email" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="role">Role</Label>
-                                <Select
-                                    name="role"
-                                    :default-value="
-                                        editingItem?.role ??
-                                        availableRoles[0]?.value ??
-                                        ''
-                                    "
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue
-                                            placeholder="Select role"
+                                <Label>Roles</Label>
+                                <div class="space-y-1 max-h-[200px] overflow-y-auto rounded-md border p-2">
+                                    <label
+                                        v-for="role in availableRoles"
+                                        :key="role.value"
+                                        class="flex items-center gap-2 rounded-md p-2 hover:bg-muted/50"
+                                    >
+                                        <Checkbox
+                                            :model-value="
+                                                selectedRoleIds.includes(
+                                                    role.value,
+                                                )
+                                            "
+                                            @update:model-value="
+                                                (checked) => {
+                                                    if (checked === true) {
+                                                        if (
+                                                            !selectedRoleIds.includes(
+                                                                role.value,
+                                                            )
+                                                        ) {
+                                                            selectedRoleIds.push(
+                                                                role.value,
+                                                            );
+                                                        }
+                                                    } else {
+                                                        selectedRoleIds =
+                                                            selectedRoleIds.filter(
+                                                                (id) =>
+                                                                    id !== role.value,
+                                                            );
+                                                    }
+                                                }
+                                            "
                                         />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem
-                                            v-for="role in availableRoles"
-                                            :key="role.value"
-                                            :value="role.value"
-                                        >
-                                            {{ role.label }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <InputError :message="errors.role" />
+                                        <span class="text-sm font-medium">{{
+                                            role.label
+                                        }}</span>
+                                    </label>
+                                </div>
+                                <InputError :message="errors.role_ids" />
                             </div>
                             <SheetFooter>
                                 <SheetClose as-child>
@@ -516,34 +543,61 @@ function userRoleIcon(role: UserRole): string | null {
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Assign Role</DialogTitle>
+                    <DialogTitle>Asignar roles</DialogTitle>
                     <DialogDescription>
-                        Change the role for "{{ roleItem?.name }}".
+                        Selecciona los roles para "{{ roleItem?.name }}".
                     </DialogDescription>
                 </DialogHeader>
                 <div class="grid gap-2 py-4">
-                    <Label>Role</Label>
-                    <Select v-model="selectedRole">
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem
-                                v-for="role in availableRoles"
-                                :key="role.value"
-                                :value="role.value"
-                            >
-                                {{ role.label }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div class="flex items-center justify-between">
+                        <Label>Roles</Label>
+                        <span class="text-xs text-muted-foreground">
+                            {{ selectedRoleIds.length }} seleccionados
+                        </span>
+                    </div>
+                    <div class="space-y-1 max-h-[200px] overflow-y-auto rounded-md border p-2">
+                        <label
+                            v-for="role in availableRoles"
+                            :key="role.id"
+                            class="flex items-center gap-2 rounded-md p-2 hover:bg-muted/50"
+                        >
+                            <Checkbox
+                                :model-value="
+                                    selectedRoleIds.includes(role.id)
+                                "
+                                @update:model-value="
+                                    (checked) => {
+                                        if (checked === true) {
+                                            if (
+                                                !selectedRoleIds.includes(
+                                                    role.id,
+                                                )
+                                            ) {
+                                                    selectedRoleIds.push(
+                                                        role.id,
+                                                    );
+                                                }
+                                            } else {
+                                                selectedRoleIds =
+                                                    selectedRoleIds.filter(
+                                                        (id) => id !== role.id,
+                                                    );
+                                            }
+                                        }
+                                    "
+                            />
+                            <span class="text-sm font-medium">{{
+                                role.label
+                            }}</span>
+                        </label>
+                    </div>
                     <InputError :message="roleError ?? undefined" />
                 </div>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
+                        <Button variant="secondary">Cancelar</Button>
                     </DialogClose>
-                    <Button @click="assignRole"> Save Role </Button>
+                    <Button @click="assignRole"> Guardar roles </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -630,25 +684,25 @@ function userRoleIcon(role: UserRole): string | null {
                                             @click="openEditSheet(item)"
                                         >
                                             <Pencil class="mr-2 h-4 w-4" />
-                                            Edit
+                                            Editar
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="openAssignRole(item)"
                                         >
                                             <Shield class="mr-2 h-4 w-4" />
-                                            Assign role
+                                            Asignar rol
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="confirmResetPassword(item)"
                                         >
                                             <Key class="mr-2 h-4 w-4" />
-                                            Reset password
+                                            Restablecer contraseña
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="confirmDelete(item)"
                                         >
                                             <Trash class="mr-2 h-4 w-4" />
-                                            Delete
+                                            Eliminar
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

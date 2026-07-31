@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Module;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -25,6 +26,49 @@ class HandleInertiaRequests extends Middleware
     public function version(Request $request): ?string
     {
         return parent::version($request);
+    }
+
+    /**
+     * Compute the list of module `name`s (e.g. `users`, `roles`, `modules`)
+     * that the given user has access to. The superusuario role has access
+     * to every module in the system.
+     *
+     * @return list<string>
+     */
+    private function accessibleModuleNames(User $user): array
+    {
+        // Treat as superuser if the user holds the superusuario role OR
+        // if their currently active role is superusuario. This handles
+        // the case where a superuser also has the paciente/doctor role
+        // and primaryRole() may resolve to the latter.
+        $holdsSuper = $user->roles()->where('slug', 'superusuario')->exists()
+            || ($user->activeRole?->slug === 'superusuario');
+
+        if ($holdsSuper) {
+            return Module::query()->pluck('name')->all();
+        }
+
+        return $user
+            ->roles()
+            ->with('modules:id,name')
+            ->get()
+            ->pluck('modules')
+            ->flatten()
+            ->pluck('name')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Return true if the user is a superusuario (either by holding the
+     * role, or by currently having it active). Used to short-circuit
+     * per-module checks in the sidebar.
+     */
+    private function userIsSuperuser(User $user): bool
+    {
+        return $user->roles()->where('slug', 'superusuario')->exists()
+            || ($user->activeRole?->slug === 'superusuario');
     }
 
     /**
@@ -67,6 +111,8 @@ class HandleInertiaRequests extends Middleware
                     'slug' => $user->activeRole?->slug,
                 ] : null,
                 'hasMultipleRoles' => (bool) (count($roles) > 1),
+                'isSuperuser' => $user ? $this->userIsSuperuser($user) : false,
+                'accessibleModules' => $user ? $this->accessibleModuleNames($user) : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

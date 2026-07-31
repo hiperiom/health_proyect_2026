@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -21,21 +22,22 @@ class MakeCrudCommand extends Command
         {--migrate : Run standard migration} 
         {--fresh : Run migrate:fresh --seed automatically without asking} 
         {--rundev : Run composer run dev automatically}';
-    protected $description = 'Generate a full CRUD (backend + frontend Inertia/Vue) following SOLID principles.';
-/*
 
-                        {name : The singular model name (PascalCase)} 
-                        {--sidebar-name= : Nombre que se verá en el sidebar (Default: PluralUpper)} 
-                        {--module-title= : Título del módulo arriba de la descripción (Default: PluralUpper)} 
-                        {--module-description= : Texto debajo del título del módulo (Default: Gestión y administración de...)} 
-                        {--new-button-text= : Texto del botón de nuevo registro, singular y capitalizado (Default: New Model)}
-                     
-                        
-                        
-                        {--test : Run backend tests and frontend build} 
-                        {--skip-test : Skip running tests}
-*/
-    
+    protected $description = 'Generate a full CRUD (backend + frontend Inertia/Vue) following SOLID principles.';
+    /*
+
+                            {name : The singular model name (PascalCase)}
+                            {--sidebar-name= : Nombre que se verá en el sidebar (Default: PluralUpper)}
+                            {--module-title= : Título del módulo arriba de la descripción (Default: PluralUpper)}
+                            {--module-description= : Texto debajo del título del módulo (Default: Gestión y administración de...)}
+                            {--new-button-text= : Texto del botón de nuevo registro, singular y capitalizado (Default: New Model)}
+
+
+
+                            {--test : Run backend tests and frontend build}
+                            {--skip-test : Skip running tests}
+    */
+
     public function handle(): void
     {
         /* $model = Str::of($this->argument('name'))->trim()->toString();
@@ -43,7 +45,7 @@ class MakeCrudCommand extends Command
             $this->error('Model name must be PascalCase (e.g. Country, Product).');
             return;
         } */
-        //$timestamp = date('Y_m_d_His');
+        // $timestamp = date('Y_m_d_His');
         $config = [];
         $config['timestamp'] = $this->option('timestamp');
         $config['modelTitle'] = $this->option('modelTitle');
@@ -63,10 +65,8 @@ class MakeCrudCommand extends Command
         $config['modelNameTable'] = $this->option('modelNameTable');
         $this->warn($config['modelNameTable']);
 
-        //$this->info("Generating CRUD for: {$model} ({$plural})");
+        // $this->info("Generating CRUD for: {$model} ({$plural})");
         $this->info("🚀 Iniciando scaffolding integral para: {$config['modelNameSingular']}");
-
-        
 
         // Backend Generation
         $this->createModel($config);
@@ -89,6 +89,11 @@ class MakeCrudCommand extends Command
         $this->updateTypeScriptRoutesIndex($config);
         $this->addSidebarNavigation($config);
 
+        // System registry: register the new module + CRUD permissions so the
+        // EnsureModuleAccess middleware and the superuser permission grants
+        // know about it right after `migrate:fresh --seed` finishes.
+        $this->registerModuleAndPermissions($config);
+
         $this->newLine();
 
         $wantsFresh = $this->option('fresh') || true;
@@ -106,17 +111,17 @@ class MakeCrudCommand extends Command
             $this->info('Running migration...');
             $this->call('migrate');
         }
-        $runDev = $this->option('rundev')  || true ;
+        $runDev = $this->option('rundev') || true;
         if ($runDev) {
             $this->newLine();
             $this->info('🚀 Iniciando entorno de desarrollo...');
             $this->info('💡 Presiona Ctrl+C en tu teclado para detener los servidores y volver a la terminal.');
             $this->newLine();
-            
-            // passthru() ejecuta el comando y deja que su salida (logs de Vite/PHP) 
+
+            // passthru() ejecuta el comando y deja que su salida (logs de Vite/PHP)
             // se imprima directamente en la terminal, transfiriendo el control al usuario.
             passthru('composer run dev');
-            
+
             $this->newLine();
             $this->info('Servidor de desarrollo detenido. Comando make:crud finalizado.');
         } else {
@@ -129,30 +134,113 @@ class MakeCrudCommand extends Command
         /*
         $plural = Str::of($model)->plural()->lower()->toString();
         $pluralUpper = Str::of($plural)->ucfirst()->toString();
-        
+
 
         $sidebarName = $this->option('sidebar-name') ?: $pluralUpper;
         $moduleTitle = $this->option('module-title') ?: $pluralUpper;
         $moduleDescription = $this->option('module-description') ?: "Gestión y administración de {$plural}.";
         $newButtonText = $this->option('new-button-text') ?: "New {$model}";
 
-        
 
-        
-        
-        
 
-        
-        
-       
+
+
+
+
+
+
+
         */
+    }
+
+    /**
+     * Register the freshly generated module in the `modules` table and
+     * attach the default CRUD permissions (read, create, update, delete)
+     * to the `permissions` table. This method is idempotent: re-running
+     * the make:crud command will not duplicate rows. The method is a
+     * no-op when the underlying tables do not exist yet (e.g. when the
+     * migration files for modules/permissions have not been executed).
+     */
+    protected function registerModuleAndPermissions(array $config): void
+    {
+        $moduleKey = $config['modelNameKebabCase'];
+        $displayName = Str::headline(Str::replace('-', ' ', $moduleKey));
+        $description = "Gestión y administración de {$displayName}.";
+
+        // The fresh seed wipes these tables, so we only attempt to seed
+        // them when the schema is already in place. Skip silently otherwise.
+        if (! Schema::hasTable('modules') || ! Schema::hasTable('permissions')) {
+            $this->warn('Las tablas `modules` o `permissions` aún no existen. Se omitirá el registro automático.');
+
+            return;
+        }
+
+        $now = now();
+
+        // 1) Upsert module row keyed by the technical `name` (kebab-case).
+        $moduleId = DB::table('modules')->where('name', $moduleKey)->value('id');
+
+        if ($moduleId === null) {
+            $moduleId = DB::table('modules')->insertGetId([
+                'name' => $moduleKey,
+                'display_name' => $displayName,
+                'description' => $description,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $this->info("✔ Módulo registrado: {$moduleKey} (display_name: {$displayName})");
+        } else {
+            $this->warn("El módulo \"{$moduleKey}\" ya existe (id={$moduleId}). Se omite su creación.");
+        }
+
+        // 2) Insert the four default CRUD permissions. They follow the
+        //    pattern used by the rest of the seeders:
+        //      name:   View | Create | Update | Delete
+        //      slug:   {module}.read | .create | .update | .delete
+        //      module: matches modules.name so EnsureModuleAccess and the
+        //              permissions page can group them correctly.
+        $crudActions = [
+            ['name' => 'View',   'slug' => "{$moduleKey}.read",   'description' => "View the {$displayName} list and details"],
+            ['name' => 'Create', 'slug' => "{$moduleKey}.create", 'description' => "Create new {$displayName}"],
+            ['name' => 'Update', 'slug' => "{$moduleKey}.update", 'description' => "Edit existing {$displayName}"],
+            ['name' => 'Delete', 'slug' => "{$moduleKey}.delete", 'description' => "Delete {$displayName}"],
+        ];
+
+        $inserted = 0;
+        foreach ($crudActions as $action) {
+            $exists = DB::table('permissions')
+                ->where('slug', $action['slug'])
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            DB::table('permissions')->insert([
+                'name' => $action['name'],
+                'slug' => $action['slug'],
+                'module' => $moduleKey,
+                'description' => $action['description'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $inserted++;
+        }
+
+        if ($inserted > 0) {
+            $this->info("✔ {$inserted} permiso(s) CRUD registrado(s) para el módulo \"{$moduleKey}\".");
+        } else {
+            $this->warn("Los permisos CRUD para \"{$moduleKey}\" ya existían. Se omiten.");
+        }
     }
 
     protected function createModel(array $config): void
     {
         $path = app_path("Models/{$config['modelNameSingular']}.php");
-        if (File::exists($path)) return;
-                    $content = <<<PHP
+        if (File::exists($path)) {
+            return;
+        }
+        $content = <<<PHP
             <?php
             namespace App\Models;
             use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -170,8 +258,10 @@ class MakeCrudCommand extends Command
     protected function createMigration(array $config): void
     {
         $path = database_path("migrations/{$config['timestamp']}_create_{$config['modelNameTable']}_table.php");
-        if (File::exists($path)) return;
-                    $content = <<<PHP
+        if (File::exists($path)) {
+            return;
+        }
+        $content = <<<PHP
             <?php
             use Illuminate\Database\Migrations\Migration;
             use Illuminate\Database\Schema\Blueprint;
@@ -196,8 +286,10 @@ class MakeCrudCommand extends Command
     protected function createFactory(array $config): void
     {
         $path = database_path("factories/{$config['modelNameSingular']}Factory.php");
-        if (File::exists($path)) return;
-                    $content = <<<PHP
+        if (File::exists($path)) {
+            return;
+        }
+        $content = <<<PHP
             <?php
             namespace Database\Factories;
             use App\Models\\{$config['modelNameSingular']};
@@ -220,8 +312,10 @@ class MakeCrudCommand extends Command
     protected function createSeeder(array $config): void
     {
         $path = database_path("seeders/{$config['modelNameSingular']}Seeder.php");
-        if (File::exists($path)) return;
-                    $content = <<<PHP
+        if (File::exists($path)) {
+            return;
+        }
+        $content = <<<PHP
             <?php
             namespace Database\Seeders;
             use Illuminate\Database\Seeder;
@@ -239,8 +333,10 @@ class MakeCrudCommand extends Command
     protected function createPolicy(array $config): void
     {
         $path = app_path("Policies/{$config['modelNameSingular']}Policy.php");
-        if (File::exists($path)) return;
-                    $content = <<<PHP
+        if (File::exists($path)) {
+            return;
+        }
+        $content = <<<PHP
             <?php
             namespace App\Policies;
             use App\Models\User;
@@ -260,8 +356,8 @@ class MakeCrudCommand extends Command
     {
         $dir = app_path("Http/Requests/{$config['modelNameSingular']}");
         File::ensureDirectoryExists($dir);
-        
-                    $storeContent = <<<PHP
+
+        $storeContent = <<<PHP
             <?php
             namespace App\Http\Requests\\{$config['modelNameSingular']};
             use Illuminate\Foundation\Http\FormRequest;
@@ -278,7 +374,7 @@ class MakeCrudCommand extends Command
             PHP;
         File::put("{$dir}/Store{$config['modelNameSingular']}Request.php", $storeContent);
 
-                $updateContent = <<<PHP
+        $updateContent = <<<PHP
         <?php
         namespace App\Http\Requests\\{$config['modelNameSingular']};
         use Illuminate\Foundation\Http\FormRequest;
@@ -301,9 +397,11 @@ class MakeCrudCommand extends Command
         $dir = app_path("Http/Resources/{$config['modelNameSingular']}");
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/{$config['modelNameSingular']}Resource.php";
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return;
+        }
 
-                    $content = <<<PHP
+        $content = <<<PHP
             <?php
             namespace App\Http\Resources\\{$config['modelNameSingular']};
             use Illuminate\Http\Request;
@@ -330,9 +428,11 @@ class MakeCrudCommand extends Command
         $dir = app_path("Services/{$config['modelNameSingular']}");
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/{$config['modelNameSingular']}Service.php";
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return;
+        }
 
-                    $content = <<<PHP
+        $content = <<<PHP
             <?php
             namespace App\Services\\{$config['modelNameSingular']};
             use App\Models\\{$config['modelNameSingular']};
@@ -360,9 +460,11 @@ class MakeCrudCommand extends Command
         $dir = app_path("Http/Controllers/{$config['modelNamePlural']}");
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/{$config['modelNamePlural']}Controller.php";
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return;
+        }
 
-                    $content = <<<PHP
+        $content = <<<PHP
             <?php
             namespace App\Http\Controllers\\{$config['modelNamePlural']};
             use App\Http\Controllers\Controller;
@@ -415,7 +517,9 @@ class MakeCrudCommand extends Command
     {
         $path = base_path('routes/web.php');
         $content = File::get($path);
-        if (Str::contains($content, "'{$config['modelNameKebabCase']}.index'")) return;
+        if (Str::contains($content, "'{$config['modelNameKebabCase']}.index'")) {
+            return;
+        }
 
         $routeBlock = <<<PHP
         use App\Http\Controllers\\{$config['modelNamePlural']}\\{$config['modelNamePlural']}Controller;
@@ -435,9 +539,11 @@ class MakeCrudCommand extends Command
         $dir = resource_path('js/types');
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/{$config['modelNameTable']}.ts";
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return;
+        }
 
-                    $content = <<<TS
+        $content = <<<TS
             export type {$config['modelNameSingular']} = {
                 id: number;
                 name: string;
@@ -455,7 +561,9 @@ class MakeCrudCommand extends Command
         $dir = resource_path("js/routes/{$config['modelNameTable']}");
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/index.ts";
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return;
+        }
 
         $content = <<<'TS'
         import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
@@ -506,12 +614,15 @@ class MakeCrudCommand extends Command
         $content = str_replace('{models}', $config['modelNameSingular'], $content);
         File::put($path, $content);
     }
-    protected function createIndexPage(array $config): void 
+
+    protected function createIndexPage(array $config): void
     {
         $dir = resource_path("js/pages/{$config['modelNameTable']}");
         File::ensureDirectoryExists($dir);
         $path = "{$dir}/Index.vue";
-        if (File::exists($path)) return;
+        if (File::exists($path)) {
+            return;
+        }
 
         $content = <<<'VUE'
         <script setup lang="ts">
@@ -830,7 +941,7 @@ class MakeCrudCommand extends Command
         VUE;
 
         $replacements = [
-            '{modelNameTable}' => $config['modelNameTable'], 
+            '{modelNameTable}' => $config['modelNameTable'],
             '{modelNameSingular}' => $config['modelNameSingular'],
             '{modelTitle}' => $config['modelTitle'],
             '{modelNameKebabCase}' => $config['modelNameKebabCase'],
@@ -844,40 +955,50 @@ class MakeCrudCommand extends Command
     protected function updateTypeScriptIndex(array $config): void
     {
         $path = resource_path('js/types/index.ts');
-        if (!File::exists($path)) return;
+        if (! File::exists($path)) {
+            return;
+        }
         $content = File::get($path);
         $line = "export * from './{$config['modelNameTable']}';";
-        if (!Str::contains($content, $line)) File::append($path, PHP_EOL.$line);
+        if (! Str::contains($content, $line)) {
+            File::append($path, PHP_EOL.$line);
+        }
     }
 
     protected function updateTypeScriptRoutesIndex(array $config): void
     {
         $path = resource_path('js/routes/index.ts');
-        if (!File::exists($path)) return;
+        if (! File::exists($path)) {
+            return;
+        }
         $content = File::get($path);
         $line = "import {$config['modelNameKebabCase']} from './{$config['modelNameKebabCase']}';";
-        if (!Str::contains($content, $line)) File::append($path, PHP_EOL.$line);
+        if (! Str::contains($content, $line)) {
+            File::append($path, PHP_EOL.$line);
+        }
     }
-    
+
     protected function addSidebarNavigation(array $config): void
     {
         $path = resource_path('js/components/AppSidebar.vue');
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             $this->warn("AppSidebar.vue not found at {$path}");
+
             return;
         }
-        
+
         $content = File::get($path);
-        
+
         // 1. Verificar si ya fue agregado para evitar duplicados
         if (Str::contains($content, "title: '{$config['modelTitle']}'")) {
             $this->warn("Navigation item for '{$config['modelTitle']}' already exists in AppSidebar.vue");
+
             return;
         }
 
         // 2. Agregar el icono si no existe (usando regex para ser flexible con el formato de importación)
-        $icon = 'FileText'; 
-        if (!Str::contains($content, $icon)) {
+        $icon = 'FileText';
+        if (! Str::contains($content, $icon)) {
             $content = preg_replace(
                 "/(import \{[^}]+) from '@lucide\/vue';/",
                 "\$1, {$icon} } from '@lucide/vue';",
@@ -887,7 +1008,7 @@ class MakeCrudCommand extends Command
 
         // 3. Agregar la importación de la ruta si no existe
         $routeImport = "import { index as {$config['modelNameSingular']}Index } from '@/routes/{$config['modelNameKebabCase']}';";
-        if (!Str::contains($content, $routeImport)) {
+        if (! Str::contains($content, $routeImport)) {
             $content = str_replace(
                 "import type { NavItem } from '@/types';",
                 "import type { NavItem } from '@/types';\n{$routeImport}",
@@ -899,7 +1020,7 @@ class MakeCrudCommand extends Command
         // Esto busca el objeto del Dashboard sin importar los espacios o saltos de línea exactos
         $pattern = "/(\{\s*title:\s*['\"]Dashboard['\"],\s*href:\s*dashboardUrl\.value,\s*icon:\s*LayoutGrid,\s*\},)/";
         $replacement = "\$1\n        {\n            title: '{$config['modelTitle']}',\n            href: {$config['modelNameSingular']}Index().url,\n            icon: {$icon},\n        },";
-        
+
         if (preg_match($pattern, $content)) {
             $content = preg_replace($pattern, $replacement, $content);
             File::put($path, $content);

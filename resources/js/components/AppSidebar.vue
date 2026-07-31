@@ -55,6 +55,8 @@ type Auth = {
         slug: string | null;
     } | null;
     hasMultipleRoles: boolean;
+    isSuperuser: boolean;
+    accessibleModules: string[];
 };
 
 type PageProps = {
@@ -70,46 +72,56 @@ const userPermissions = computed<string[]>(
 );
 
 const isSuperuser = computed<boolean>(
-    () => page.props.auth.user?.role === 'superusuario',
+    () => page.props.auth.isSuperuser === true,
 );
 
-const canUsers = computed<boolean>(
-    () =>
-        isSuperuser.value ||
-        userPermissions.value.some((slug) => slug.startsWith('users.')),
+const accessibleModules = computed<string[]>(
+    () => page.props.auth.accessibleModules ?? [],
 );
 
-const canRoles = computed<boolean>(
-    () =>
-        isSuperuser.value ||
-        userPermissions.value.some((slug) => slug.startsWith('roles.')),
-);
+/**
+ * Check whether the current user can see a given module by its
+ * canonical name (e.g. `users`, `roles`, `modules`).
+ *
+ * The superusuario always has access to every module. For any other
+ * role the module name must appear in the `accessibleModules` list
+ * (computed server-side from the user's roles + the roles_modules
+ * pivot table).
+ */
+const canAccessModule = (moduleName: string): boolean => {
+    if (isSuperuser.value) {
+        return true;
+    }
 
+    return accessibleModules.value.includes(moduleName);
+};
+
+/**
+ * Check whether the current user has a permission on a given module.
+ * Used as a secondary signal for the (legacy) per-route menu items
+ * where the route has not been migrated to the new module-based
+ * filtering yet.
+ */
+const hasModulePermission = (moduleName: string): boolean => {
+    if (isSuperuser.value) {
+        return true;
+    }
+
+    return userPermissions.value.some((slug) =>
+        slug.startsWith(`${moduleName}.`),
+    );
+};
+
+const canUsers = computed<boolean>(() => canAccessModule('users'));
+const canRoles = computed<boolean>(() => canAccessModule('roles'));
 const canPermissions = computed<boolean>(
-    () =>
-        isSuperuser.value ||
-        userPermissions.value.some((slug) => slug.startsWith('permissions.')),
+    () => canAccessModule('permissions'),
 );
-
-const canModules = computed<boolean>(
-    () =>
-        isSuperuser.value ||
-        userPermissions.value.some((slug) => slug.startsWith('modules.')),
-);
-
+const canModules = computed<boolean>(() => canAccessModule('modules'));
 const canMedicalEspecialties = computed<boolean>(
-    () =>
-        isSuperuser.value ||
-        userPermissions.value.some((slug) =>
-            slug.startsWith('medicalespecialties.'),
-        ),
+    () => canAccessModule('medicalespecialties'),
 );
-
-const canPatients = computed<boolean>(
-    () =>
-        isSuperuser.value ||
-        userPermissions.value.some((slug) => slug.startsWith('patients.')),
-);
+const canPatients = computed<boolean>(() => canAccessModule('patients'));
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
@@ -119,7 +131,6 @@ const mainNavItems = computed<NavItem[]>(() => {
             icon: LayoutGrid,
         },
     ];
-    // --- OPCIÓN DESPLEGABLE CON SUBMENÚS ---
     const geographicalLocation: NavItem[] = [];
 
     if (canUsers.value) {
@@ -134,7 +145,7 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({
             title: 'Ubicación Geográfica',
             icon: ShieldCheck,
-            items: geographicalLocation, // Lista de subelementos
+            items: geographicalLocation,
         });
     }
 
@@ -201,6 +212,11 @@ const footerNavItems: NavItem[] = [
         icon: BookOpen,
     },
 ];
+
+// Suppress unused warning for the legacy helper. The helper is kept
+// for non-migrated routes that still rely on the `permissions` array.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _legacy = hasModulePermission;
 </script>
 
 <template>

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -132,10 +133,13 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * Get the list of permission slugs available to the user.
+     * Get the user's list of permission slugs available to the user.
      *
      * - Superusuario gets every permission in the system.
-     * - All other users get the slugs of their directly assigned permissions.
+     * - All other users get the union of:
+     *     1) their directly assigned permissions (`users_permissions`)
+     *     2) permissions enabled for any of the modules of any of their roles
+     *        via the new `roles_modules_permissions` pivot.
      *
      * @return array<int, string>
      */
@@ -145,7 +149,20 @@ class User extends Authenticatable implements PasskeyUser
             return Permission::query()->pluck('slug')->all();
         }
 
-        return $this->permissions()->pluck('slug')->all();
+        $directSlugs = $this->permissions()->pluck('slug')->all();
+
+        $rolePermissionSlugs = DB::table('roles_modules_permissions as rmp')
+            ->join('users_roles as ur', 'ur.role_id', '=', 'rmp.role_id')
+            ->join('permissions as p', 'p.id', '=', 'rmp.permission_id')
+            ->where('ur.user_id', $this->id)
+            ->pluck('p.slug')
+            ->all();
+
+        $combined = array_values(array_unique(array_merge($directSlugs, $rolePermissionSlugs)));
+
+        sort($combined);
+
+        return $combined;
     }
 
     /**

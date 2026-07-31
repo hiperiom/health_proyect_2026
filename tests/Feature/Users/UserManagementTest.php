@@ -44,12 +44,13 @@ test('user is created with the assigned role and stored in users_roles', functio
     Notification::fake();
 
     $admin = User::factory()->create();
+    $doctorRole = Role::query()->where('slug', UserRole::Doctor->value)->firstOrFail();
 
     $this->actingAs($admin)
         ->post(route('users.store'), [
             'name' => 'Juan Perez',
             'email' => 'juan.perez@example.com',
-            'role' => UserRole::Doctor->value,
+            'role_ids' => [$doctorRole->id],
         ])
         ->assertRedirect(route('users.index'));
 
@@ -70,10 +71,11 @@ test('user role is updated through the pivot table', function () {
     $user->roles()->attach($paciente);
 
     $admin = User::factory()->create();
+    $doctorRole = Role::query()->where('slug', UserRole::Doctor->value)->firstOrFail();
 
     $this->actingAs($admin)
         ->patch(route('users.update', $user), [
-            'role' => UserRole::Doctor->value,
+            'role_ids' => [$doctorRole->id],
         ])
         ->assertRedirect(route('users.index'));
 
@@ -106,14 +108,14 @@ test('users can be filtered by role slug in the index', function () {
         );
 });
 
-test('creating a user with an invalid role slug fails validation', function () {
+test('creating a user with an invalid role id fails validation', function () {
     $admin = User::factory()->create();
 
     $this->actingAs($admin)
         ->post(route('users.store'), [
             'name' => 'Bad Role',
             'email' => 'bad.role@example.com',
-            'role' => 'no-existe',
+            'role_ids' => [9999],
         ])
-        ->assertSessionHasErrors('role');
+        ->assertSessionHasErrors('role_ids.0');
 });
