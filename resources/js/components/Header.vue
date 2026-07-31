@@ -1,6 +1,6 @@
 
 <script setup>
-import { computed, ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import {
     AlertOctagon,
     AlertTriangle,
@@ -12,9 +12,8 @@ import {
     Settings,
     User,
 } from '@lucide/vue';
-import { getInitials } from '@/composables/useInitials';
-import { edit as profileEdit } from '@/routes/profile';
-import { logout } from '@/routes';
+import { computed, ref } from 'vue';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     Dialog,
     DialogContent,
@@ -23,13 +22,6 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from '@/components/ui/sheet';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -46,9 +38,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
+import { getInitials } from '@/composables/useInitials';
+import { logout } from '@/routes';
+import { edit as profileEdit } from '@/routes/profile';
 
-import { usePage } from '@inertiajs/vue3';
 const page = usePage();
 
 const auth = computed(() => page.props.auth);

@@ -2,15 +2,8 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpen,
-    Boxes,
-    FileText,
     FolderGit2,
-    Key,
     LayoutGrid,
-    Shield,
-    Stethoscope,
-    Users,
-    ShieldCheck,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -27,15 +20,17 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import { index as medicalespecialtiesIndex } from '@/routes/medicalespecialties';
-import { index as modulesIndex } from '@/routes/modules';
-import { index as patientsIndex } from '@/routes/patients';
-import { index as permissionsIndex } from '@/routes/permissions';
-import { index as rolesIndex } from '@/routes/roles';
-import { index as usersIndex } from '@/routes/users';
 import type { RoleModel } from '@/types';
 import type { NavItem } from '@/types';
+import {
+    defaultModuleSidebarEntry,
+    moduleSidebarConfig,
+} from '@/config/modules';
+import type {
+    ModuleSidebarEntry,
+    ModuleSidebarGroup,
+} from '@/config/modules';
+import { dashboard } from '@/routes';
 
 type AuthUser = {
     id: number;
@@ -67,10 +62,6 @@ const page = usePage<PageProps>();
 
 const dashboardUrl = computed(() => dashboard().url);
 
-const userPermissions = computed<string[]>(
-    () => page.props.auth.user?.permissions ?? [],
-);
-
 const isSuperuser = computed<boolean>(
     () => page.props.auth.isSuperuser === true,
 );
@@ -80,49 +71,99 @@ const accessibleModules = computed<string[]>(
 );
 
 /**
- * Check whether the current user can see a given module by its
- * canonical name (e.g. `users`, `roles`, `modules`).
- *
- * The superusuario always has access to every module. For any other
- * role the module name must appear in the `accessibleModules` list
- * (computed server-side from the user's roles + the roles_modules
- * pivot table).
+ * The sidebar source-of-truth for "which modules to render" is the
+ * server-provided `accessibleModules` list (driven by the
+ * `roles_modules` pivot). The superusuario always gets the union
+ * of every module in the system (the middleware pushes the entire
+ * `modules` table to it).
  */
-const canAccessModule = (moduleName: string): boolean => {
-    if (isSuperuser.value) {
-        return true;
+const visibleModules = computed<string[]>(() => {
+    const seen = new Set<string>();
+
+    for (const name of accessibleModules.value) {
+        if (name) {
+            seen.add(name);
+        }
     }
 
-    return accessibleModules.value.includes(moduleName);
+    return Array.from(seen);
+});
+
+/**
+ * Build a default human-readable title from a snake/kebab-case
+ * module name (`medical_especialties` -> `Medical Especialties`).
+ */
+const defaultModuleTitle = (moduleName: string): string => {
+    return moduleName
+        .replace(/[-_]+/g, ' ')
+        .split(' ')
+        .filter((part) => part !== '')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
 };
 
 /**
- * Check whether the current user has a permission on a given module.
- * Used as a secondary signal for the (legacy) per-route menu items
- * where the route has not been migrated to the new module-based
- * filtering yet.
+ * Try to find a static config entry for a module, accepting both
+ * the kebab-case key (`medical-especialties`) and the snake_case
+ * key (`medical_especialties`) so the registry works regardless
+ * of which canonical form was used when the module was registered.
  */
-const hasModulePermission = (moduleName: string): boolean => {
-    if (isSuperuser.value) {
-        return true;
+const lookupConfig = (moduleName: string): ModuleSidebarEntry | null => {
+    if (moduleSidebarConfig[moduleName]) {
+        return moduleSidebarConfig[moduleName];
     }
 
-    return userPermissions.value.some((slug) =>
-        slug.startsWith(`${moduleName}.`),
-    );
+    const normalised = moduleName.replace(/_/g, '-');
+    if (moduleSidebarConfig[normalised]) {
+        return moduleSidebarConfig[normalised];
+    }
+
+    return null;
 };
 
-const canUsers = computed<boolean>(() => canAccessModule('users'));
-const canRoles = computed<boolean>(() => canAccessModule('roles'));
-const canPermissions = computed<boolean>(
-    () => canAccessModule('permissions'),
-);
-const canModules = computed<boolean>(() => canAccessModule('modules'));
-const canMedicalEspecialties = computed<boolean>(
-    () => canAccessModule('medicalespecialties'),
-);
-const canPatients = computed<boolean>(() => canAccessModule('patients'));
+const hasChildren = (
+    entry: ModuleSidebarEntry,
+): entry is ModuleSidebarGroup => {
+    return Array.isArray((entry as ModuleSidebarGroup).children);
+};
 
+/**
+ * Resolve the display title for a module.
+ */
+const moduleTitle = (moduleName: string): string => {
+    const entry = lookupConfig(moduleName);
+
+    if (entry && !hasChildren(entry) && entry.title !== '') {
+        return entry.title;
+    }
+
+    return defaultModuleTitle(moduleName);
+};
+
+/**
+ * Resolve the icon for a module.
+ */
+const moduleIcon = (moduleName: string) => {
+    const entry = lookupConfig(moduleName);
+
+    if (entry) {
+        return entry.icon;
+    }
+
+    return defaultModuleSidebarEntry.icon;
+};
+
+/**
+ * Build the final `mainNavItems` list.
+ *
+ * By default every visible module is rendered as its own top-level
+ * entry in the sidebar. If a module's entry in `moduleSidebarConfig`
+ * has a `children` array, it becomes a collapsible group instead.
+ *
+ * To create your own groups manually, edit
+ * `resources/js/config/modules.ts` and use the `group` shape. See the
+ * commented example at the bottom of that file.
+ */
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
@@ -131,70 +172,32 @@ const mainNavItems = computed<NavItem[]>(() => {
             icon: LayoutGrid,
         },
     ];
-    const geographicalLocation: NavItem[] = [];
 
-    if (canUsers.value) {
-        /*geographicalLocation.push({
-            title: 'Countries',
-            href: countriesIndex().url,
-            icon: FileText,
-        });*/
-    }
+    for (const moduleName of visibleModules.value) {
+        const entry = lookupConfig(moduleName);
 
-    if (geographicalLocation.length > 0) {
-        items.push({
-            title: 'Ubicación Geográfica',
-            icon: ShieldCheck,
-            items: geographicalLocation,
-        });
-    }
-
-    if (canUsers.value) {
-        items.push({
-            title: 'Usuarios',
-            href: usersIndex().url,
-            icon: Key,
-        });
-    }
-
-    if (canRoles.value) {
-        items.push({
-            title: 'Roles',
-            href: rolesIndex().url,
-            icon: Shield,
-        });
-    }
-
-    if (canPermissions.value) {
-        items.push({
-            title: 'Permisos',
-            href: permissionsIndex().url,
-            icon: FileText,
-        });
-    }
-
-    if (canModules.value) {
-        items.push({
-            title: 'Modules',
-            href: modulesIndex().url,
-            icon: Boxes,
-        });
-    }
-
-    if (canMedicalEspecialties.value) {
-        items.push({
-            title: 'Medical Specialties',
-            href: medicalespecialtiesIndex().url,
-            icon: Stethoscope,
-        });
-    }
-
-    if (canPatients.value) {
-        items.push({
-            title: 'Patients',
-            href: patientsIndex().url,
-            icon: Users,
-        });
+        if (entry && hasChildren(entry)) {
+            // Group shape: render a collapsible parent with its
+            // children. Useful when you want to nest several modules
+            // under a common heading.
+            const groupEntry = entry as ModuleSidebarGroup;
+            items.push({
+                title: groupEntry.title,
+                icon: groupEntry.icon,
+                items: groupEntry.children.map((child) => ({
+                    title: child.title,
+                    href: `/${moduleName}`,
+                    icon: child.icon,
+                })),
+            });
+        } else {
+            // Default shape: single top-level menu item.
+            items.push({
+                title: moduleTitle(moduleName),
+                href: `/${moduleName}`,
+                icon: moduleIcon(moduleName),
+            });
+        }
     }
 
     return items;
@@ -213,10 +216,6 @@ const footerNavItems: NavItem[] = [
     },
 ];
 
-// Suppress unused warning for the legacy helper. The helper is kept
-// for non-migrated routes that still rely on the `permissions` array.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _legacy = hasModulePermission;
 </script>
 
 <template>

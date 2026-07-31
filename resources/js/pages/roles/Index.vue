@@ -4,6 +4,7 @@ import { LayoutGrid, MoreVertical, Pencil, Plus, Search, Shield, Trash } from '@
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import RoleColorPicker from '@/components/RoleColorPicker.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -30,7 +31,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import RoleColorPicker from '@/components/RoleColorPicker.vue';
 import {
     Sheet,
     SheetClose,

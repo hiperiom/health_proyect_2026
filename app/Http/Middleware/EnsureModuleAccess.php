@@ -3,14 +3,21 @@
 namespace App\Http\Middleware;
 
 use App\Models\Module;
+use App\Models\Role;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Block access to module-prefixed routes when the authenticated user
- * does not have the corresponding module assigned to any of their
- * roles. The superusuario always has access to every module.
+ * does not have the corresponding module assigned to the role they
+ * are currently active in.
+ *
+ * The superusuario always has access to every module, but only when
+ * the user is *active as* superusuario. Holding the role without
+ * being active in it is not enough — the user must have explicitly
+ * switched to it. This prevents a "superusuario + paciente" user
+ * from accessing admin routes while acting as paciente.
  *
  * Usage in routes/web.php:
  *   Route::middleware(['auth', EnsureModuleAccess::class])
@@ -30,10 +37,9 @@ class EnsureModuleAccess
             return $next($request);
         }
 
-        $holdsSuper = $user->roles()->where('slug', 'superusuario')->exists()
-            || ($user->activeRole?->slug === 'superusuario');
+        $activeRole = $user->activeRole ?? $user->primaryRole();
 
-        if ($holdsSuper) {
+        if ($activeRole?->slug === Role::SUPERUSER_SLUG) {
             return $next($request);
         }
 
@@ -49,16 +55,10 @@ class EnsureModuleAccess
             return $next($request);
         }
 
-        $userModuleNames = $user
-            ->roles()
-            ->with('modules:id,name')
-            ->get()
-            ->pluck('modules')
-            ->flatten()
-            ->pluck('name')
-            ->unique()
-            ->values()
-            ->all();
+        // Use the active role's modules, not the union of every role
+        // the user has. This is what makes the "active role" semantic
+        // actually take effect.
+        $userModuleNames = $activeRole?->modules()->pluck('name')->all() ?? [];
 
         if (! in_array($moduleName, $userModuleNames, true)) {
             abort(403, 'No tienes acceso a este módulo.');

@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+﻿import { createInertiaApp } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
@@ -8,7 +8,7 @@ import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'HealthAgent';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

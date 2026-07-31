@@ -87,7 +87,7 @@ class MakeCrudCommand extends Command
         $this->createIndexPage($config);
         $this->updateTypeScriptIndex($config);
         $this->updateTypeScriptRoutesIndex($config);
-        $this->addSidebarNavigation($config);
+        $this->appendToModuleSidebarConfig($config);
 
         // System registry: register the new module + CRUD permissions so the
         // EnsureModuleAccess middleware and the superuser permission grants
@@ -1028,5 +1028,74 @@ class MakeCrudCommand extends Command
         } else {
             $this->warn("Could not find the 'Dashboard' menu item structure to append to. Please add the '{$config['modelNameSingular']}' navigation item manually.");
         }
+    }
+
+    /**
+     * Persist the sidebar metadata for the freshly generated module
+     * into `resources/js/config/modules.ts`. The AppSidebar reads
+     * that file at runtime to build its `mainNavItems`, so as soon
+     * as the entry is in place the new module shows up in the
+     * sidebar for any user that has access to it.
+     *
+     * Idempotent: if an entry for the same module key already
+     * exists, this method does nothing.
+     */
+    protected function appendToModuleSidebarConfig(array $config): void
+    {
+        $moduleKey = $config['modelNameKebabCase'];
+        $displayName = $config['modelTitle'];
+        $iconName = 'FileText';
+
+        $path = resource_path('js/config/modules.ts');
+        if (! File::exists($path)) {
+            File::ensureDirectoryExists(dirname($path));
+            File::put($path, $this->moduleSidebarConfigTemplate());
+        }
+
+        $contents = File::get($path);
+
+        // Idempotency: skip if a key for this module already exists.
+        if (preg_match("/['\"]".preg_quote($moduleKey, '/')."['\"]\s*:/", $contents) === 1) {
+            $this->warn("La entrada para \"{$moduleKey}\" ya existe en moduleSidebarConfig. Se omite.");
+
+            return;
+        }
+
+        $entry = "    '{$moduleKey}': { title: '{$displayName}', icon: {$iconName} },";
+        $contents = preg_replace(
+            '/(\};)(\s*)$/',
+            $entry."\n$1$2",
+            $contents,
+            1
+        );
+
+        File::put($path, $contents);
+        $this->info("moduleSidebarConfig actualizado con el módulo \"{$moduleKey}\".");
+    }
+
+    /**
+     * Return a minimal starting template for the moduleSidebarConfig
+     * file in case it does not exist yet.
+     */
+    protected function moduleSidebarConfigTemplate(): string
+    {
+        return <<<'TPL'
+import { FileText } from '@lucide/vue';
+import type { LucideIcon } from '@lucide/vue';
+
+export type ModuleSidebarConfig = {
+    title: string;
+    icon: LucideIcon;
+    iconFallback?: string;
+};
+
+export const moduleSidebarConfig: Record<string, ModuleSidebarConfig> = {
+};
+
+export const defaultModuleSidebarEntry: ModuleSidebarConfig = {
+    title: '',
+    icon: FileText,
+};
+TPL;
     }
 }

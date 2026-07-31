@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Module;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -30,30 +31,34 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Compute the list of module `name`s (e.g. `users`, `roles`, `modules`)
-     * that the given user has access to. The superusuario role has access
-     * to every module in the system.
+     * that the given user can see in the sidebar right now.
+     *
+     * The check is **strictly based on the user's active role**, not on
+     * the full set of roles they happen to hold. This avoids the
+     * "I have superusuario + paciente, I'm active as paciente, but
+     * I still see every superusuario module" bug: the visible modules
+     * are always the ones granted to the role the user is currently
+     * acting as. Users with `superusuario` always get the full set,
+     * because the active role short-circuits to `superusuario`.
      *
      * @return list<string>
      */
     private function accessibleModuleNames(User $user): array
     {
-        // Treat as superuser if the user holds the superusuario role OR
-        // if their currently active role is superusuario. This handles
-        // the case where a superuser also has the paciente/doctor role
-        // and primaryRole() may resolve to the latter.
-        $holdsSuper = $user->roles()->where('slug', 'superusuario')->exists()
-            || ($user->activeRole?->slug === 'superusuario');
-
-        if ($holdsSuper) {
+        if ($this->userIsSuperuser($user)) {
             return Module::query()->pluck('name')->all();
         }
 
-        return $user
-            ->roles()
-            ->with('modules:id,name')
-            ->get()
-            ->pluck('modules')
-            ->flatten()
+        // The user is "acting as" their active role. Compute the
+        // accessible modules for that single role, ignoring any other
+        // role they might happen to hold on top of it.
+        $activeRole = $user->activeRole ?? $user->primaryRole();
+
+        if ($activeRole === null) {
+            return [];
+        }
+
+        return $activeRole->modules()
             ->pluck('name')
             ->unique()
             ->values()
@@ -61,14 +66,18 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Return true if the user is a superusuario (either by holding the
-     * role, or by currently having it active). Used to short-circuit
-     * per-module checks in the sidebar.
+     * Return true if the user is currently acting as `superusuario`.
+     *
+     * The user is considered a superuser only when the role they are
+     * currently active in is `superusuario`. Holding the role without
+     * being active in it is NOT enough — the user must have explicitly
+     * switched to it.
      */
     private function userIsSuperuser(User $user): bool
     {
-        return $user->roles()->where('slug', 'superusuario')->exists()
-            || ($user->activeRole?->slug === 'superusuario');
+        $activeRole = $user->activeRole ?? $user->primaryRole();
+
+        return $activeRole?->slug === Role::SUPERUSER_SLUG;
     }
 
     /**

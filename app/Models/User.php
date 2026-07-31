@@ -142,21 +142,39 @@ class User extends Authenticatable implements PasskeyUser
      *        via the new `roles_modules_permissions` pivot.
      *
      * @return array<int, string>
+    /**
+     * Get the user's list of permission slugs available right now.
+     *
+     * The list is derived from the role the user is currently active
+     * in (or the primary role when no active role is set). The
+     * superusuario short-circuits to every permission in the system
+     * so the role can manage everything.
+     *
+     * - Active as superusuario -> every permission in the system.
+     * - Active as anything else -> the union of:
+     *     1) the user's directly assigned permissions (`users_permissions`)
+     *     2) permissions enabled for the active role via the
+     *        `roles_modules_permissions` pivot.
+     * @return array<int, string>
      */
     public function permissionSlugs(): array
     {
-        if ($this->primaryRole()?->slug === 'superusuario') {
+        $activeRole = $this->activeRole ?? $this->primaryRole();
+
+        if ($activeRole?->slug === Role::SUPERUSER_SLUG) {
             return Permission::query()->pluck('slug')->all();
         }
 
         $directSlugs = $this->permissions()->pluck('slug')->all();
 
-        $rolePermissionSlugs = DB::table('roles_modules_permissions as rmp')
-            ->join('users_roles as ur', 'ur.role_id', '=', 'rmp.role_id')
-            ->join('permissions as p', 'p.id', '=', 'rmp.permission_id')
-            ->where('ur.user_id', $this->id)
-            ->pluck('p.slug')
-            ->all();
+        $rolePermissionSlugs = [];
+        if ($activeRole !== null) {
+            $rolePermissionSlugs = DB::table('roles_modules_permissions as rmp')
+                ->join('permissions as p', 'p.id', '=', 'rmp.permission_id')
+                ->where('rmp.role_id', $activeRole->id)
+                ->pluck('p.slug')
+                ->all();
+        }
 
         $combined = array_values(array_unique(array_merge($directSlugs, $rolePermissionSlugs)));
 

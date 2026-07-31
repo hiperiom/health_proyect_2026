@@ -91,3 +91,12 @@ Route::middleware(['auth', EnsureModuleAccess::class])->prefix('doctors')->name(
     Route::patch('/{item}', [DoctorController::class, 'update'])->name('update');
     Route::delete('/{item}', [DoctorController::class, 'destroy'])->name('destroy');
 });
+use App\Http\Controllers\Allergies\AllergiesController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('allergies', [AllergiesController::class, 'index'])->name('allergies.index');
+    Route::post('allergies', [AllergiesController::class, 'store'])->name('allergies.store');
+    Route::get('allergies/{item}/edit', [AllergiesController::class, 'edit'])->name('allergies.edit');
+    Route::patch('allergies/{item}', [AllergiesController::class, 'update'])->name('allergies.update');
+    Route::delete('allergies/{item}', [AllergiesController::class, 'destroy'])->name('allergies.destroy');
+});
