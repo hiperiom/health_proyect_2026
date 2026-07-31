@@ -13,8 +13,8 @@ import {
     User,
 } from '@lucide/vue';
 import { ref } from 'vue';
-import { logout } from '@/routes';
 import { Button } from '@/components/ui/button';
+import { logout } from '@/routes';
 
 defineOptions({
     layout: {

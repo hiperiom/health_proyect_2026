@@ -114,7 +114,7 @@ const canPatients = computed<boolean>(
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
-            title: 'Dashboard',
+            title: 'Pantalla Inicial',
             href: dashboardUrl.value,
             icon: LayoutGrid,
         },
@@ -140,7 +140,7 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     if (canUsers.value) {
         items.push({
-            title: 'Users',
+            title: 'Usuarios',
             href: usersIndex().url,
             icon: Key,
         });
@@ -156,7 +156,7 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     if (canPermissions.value) {
         items.push({
-            title: 'Permissions',
+            title: 'Permisos',
             href: permissionsIndex().url,
             icon: FileText,
         });

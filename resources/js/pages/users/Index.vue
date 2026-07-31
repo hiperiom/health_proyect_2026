@@ -567,7 +567,7 @@ function userRoleIcon(role: UserRole): string | null {
             </AlertDescription>
         </Alert>
 
-        <div class="min-h-0 flex-1 overflow-auto rounded-md border" id="tour-table">
+        <div class="min-h-0 mx-3 flex-1 overflow-auto rounded-md border" id="tour-table">
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50">
                     <tr>

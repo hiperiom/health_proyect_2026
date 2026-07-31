@@ -1,9 +1,10 @@
 import { createInertiaApp } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import AppLayout from '@/layouts/AppLayout.vue';
-import AuthLayout from '@/layouts/AuthLayout.vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import RoleSelectLayout from '@/layouts/auth/RoleSelectLayout.vue';
+import AuthLayout from '@/layouts/AuthLayout.vue';
+import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
@@ -15,6 +16,8 @@ createInertiaApp({
         switch (true) {
             case name === 'Welcome':
                 return null;
+            case name === 'Dashboard':
+                return DashboardLayout;
             case name === 'auth/RoleSelect':
                 return RoleSelectLayout;
             case name === 'auth/Login':
