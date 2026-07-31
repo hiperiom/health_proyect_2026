@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3';
 import { MoreVertical, Pencil, Plus, Search, Trash } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
@@ -42,8 +42,6 @@ import {
 import { index, store, update, destroy } from '@/routes/permissions';
 import type { PermissionModel } from '@/types/permissions';
 
-const page = usePage();
-
 type Props = {
     items: {
         data: PermissionModel[];
@@ -66,6 +64,10 @@ type Props = {
 const props = withDefaults(defineProps<Props>(), {
     availableModules: () => [],
 });
+
+const filters = computed<{ search?: string; module?: string; per_page?: number }>(
+    () => props.filters ?? {},
+);
 
 const availableModules = computed<string[]>(() => props.availableModules);
 const selectedModule = ref<string>(
@@ -317,7 +319,7 @@ function deleteItem() {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="item in items" :key="item.id" class="border-t">
+                    <tr v-for="item in items.data" :key="item.id" class="border-t">
                         <td class="px-4 py-3 font-medium">{{ item.name }}</td>
                         <td class="px-4 py-3 text-muted-foreground">
                             {{ item.slug }}
@@ -362,7 +364,7 @@ function deleteItem() {
                             </div>
                         </td>
                     </tr>
-                    <tr v-if="!items.length">
+                    <tr v-if="!items.data.length">
                         <td
                             colspan="5"
                             class="px-4 py-8 text-center text-muted-foreground"
@@ -405,7 +407,7 @@ function deleteItem() {
                         @click="
                             router.get(
                                 index().url,
-                                { ...filters, page: items.current_page - 1 },
+                                { ...filters.value, page: items.current_page - 1 },
                                 { preserveState: true, preserveScroll: true },
                             )
                         "
@@ -419,7 +421,7 @@ function deleteItem() {
                         @click="
                             router.get(
                                 index().url,
-                                { ...filters, page: items.current_page + 1 },
+                                { ...filters.value, page: items.current_page + 1 },
                                 { preserveState: true, preserveScroll: true },
                             )
                         "

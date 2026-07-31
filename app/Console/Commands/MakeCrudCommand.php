@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -40,12 +41,7 @@ class MakeCrudCommand extends Command
 
     public function handle(): void
     {
-        /* $model = Str::of($this->argument('name'))->trim()->toString();
-        if (!ctype_upper($model[0])) {
-            $this->error('Model name must be PascalCase (e.g. Country, Product).');
-            return;
-        } */
-        // $timestamp = date('Y_m_d_His');
+
         $config = [];
         $config['timestamp'] = $this->option('timestamp');
         $config['modelTitle'] = $this->option('modelTitle');
@@ -66,6 +62,14 @@ class MakeCrudCommand extends Command
         $this->warn($config['modelNameTable']);
 
         // $this->info("Generating CRUD for: {$model} ({$plural})");
+        $nombreRama = $this->option('modelNameTable');
+
+        $this->info("Creando y cambiando a la rama: {$nombreRama}...");
+
+        // Ejecutamos el comando en la raíz del proyecto Laravel
+        $result = Process::path(base_path())
+            ->run("git checkout -b {$nombreRama}");
+
         $this->info("🚀 Iniciando scaffolding integral para: {$config['modelNameSingular']}");
 
         // Backend Generation
@@ -89,11 +93,6 @@ class MakeCrudCommand extends Command
         $this->updateTypeScriptRoutesIndex($config);
         $this->appendToModuleSidebarConfig($config);
 
-        // System registry: register the new module + CRUD permissions so the
-        // EnsureModuleAccess middleware and the superuser permission grants
-        // know about it right after `migrate:fresh --seed` finishes.
-        $this->registerModuleAndPermissions($config);
-
         $this->newLine();
 
         $wantsFresh = $this->option('fresh') || true;
@@ -102,6 +101,11 @@ class MakeCrudCommand extends Command
             $this->info('Ejecutando migrate:fresh --seed...');
             $this->call('migrate:fresh', ['--seed' => true]);
         }
+
+        // System registry: register the new module + CRUD permissions so the
+        // EnsureModuleAccess middleware and the superuser permission grants
+        // know about it right after `migrate:fresh --seed` finishes.
+        $this->registerModuleAndPermissions($config);
 
         $this->info('Regenerating Wayfinder types...');
         $this->call('wayfinder:generate', ['--with-form' => true]);
@@ -164,7 +168,9 @@ class MakeCrudCommand extends Command
     protected function registerModuleAndPermissions(array $config): void
     {
         $moduleKey = $config['modelNameKebabCase'];
-        $displayName = Str::headline(Str::replace('-', ' ', $moduleKey));
+        // Use the human-friendly modelTitle so the displayed name matches
+        // the one used in moduleSidebarConfig and the Index.vue page.
+        $displayName = $config['modelTitle'];
         $description = "Gestión y administración de {$displayName}.";
 
         // The fresh seed wipes these tables, so we only attempt to seed
