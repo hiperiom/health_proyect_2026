@@ -56,7 +56,7 @@ const auth = computed(() => page.props.auth);
 const user = computed(() => auth.value.user);
 const view = ref<'empty' | 'results'>('empty');
 
-const searchTab = ref<'simple' | 'advanced'>('simple');
+let searchTab = 'simple';
 const simpleQuery = ref('');
 const searchOpen = ref(false);
 const notificationsOpen = ref(false);
