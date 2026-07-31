@@ -13,3 +13,4 @@ export * from './patients';
 export * from './doctors';
 
 export * from './allergies';
+export * from './health_backgrounds';

@@ -100,3 +100,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('allergies/{item}', [AllergiesController::class, 'update'])->name('allergies.update');
     Route::delete('allergies/{item}', [AllergiesController::class, 'destroy'])->name('allergies.destroy');
 });
+use App\Http\Controllers\HealthBackgrounds\HealthBackgroundsController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('health-backgrounds', [HealthBackgroundsController::class, 'index'])->name('health-backgrounds.index');
+    Route::post('health-backgrounds', [HealthBackgroundsController::class, 'store'])->name('health-backgrounds.store');
+    Route::get('health-backgrounds/{item}/edit', [HealthBackgroundsController::class, 'edit'])->name('health-backgrounds.edit');
+    Route::patch('health-backgrounds/{item}', [HealthBackgroundsController::class, 'update'])->name('health-backgrounds.update');
+    Route::delete('health-backgrounds/{item}', [HealthBackgroundsController::class, 'destroy'])->name('health-backgrounds.destroy');
+});
