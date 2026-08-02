@@ -95,3 +95,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('health-backgrounds/{item}', [HealthBackgroundsController::class, 'update'])->name('health-backgrounds.update');
     Route::delete('health-backgrounds/{item}', [HealthBackgroundsController::class, 'destroy'])->name('health-backgrounds.destroy');
 });
+use App\Http\Controllers\Doctors\DoctorsController;
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('doctors', [DoctorsController::class, 'index'])->name('doctors.index');
+    Route::post('doctors', [DoctorsController::class, 'store'])->name('doctors.store');
+    Route::get('doctors/{item}/edit', [DoctorsController::class, 'edit'])->name('doctors.edit');
+    Route::patch('doctors/{item}', [DoctorsController::class, 'update'])->name('doctors.update');
+    Route::delete('doctors/{item}', [DoctorsController::class, 'destroy'])->name('doctors.destroy');
+});

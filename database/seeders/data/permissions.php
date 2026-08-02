@@ -45,4 +45,9 @@ return [
     ['name' => 'Create', 'slug' => 'allergies.create', 'module' => 'allergies', 'description' => 'Create new Allergies'],
     ['name' => 'Update', 'slug' => 'allergies.update', 'module' => 'allergies', 'description' => 'Edit existing Allergies'],
     ['name' => 'Delete', 'slug' => 'allergies.delete', 'module' => 'allergies', 'description' => 'Delete Allergies'],
+    // Doctores
+    ['name' => 'View',   'slug' => 'doctors.read',   'module' => 'doctors', 'description' => 'View the Doctores list and details'],
+    ['name' => 'Create', 'slug' => 'doctors.create', 'module' => 'doctors', 'description' => 'Create new Doctores'],
+    ['name' => 'Update', 'slug' => 'doctors.update', 'module' => 'doctors', 'description' => 'Edit existing Doctores'],
+    ['name' => 'Delete', 'slug' => 'doctors.delete', 'module' => 'doctors', 'description' => 'Delete Doctores'],
 ];
