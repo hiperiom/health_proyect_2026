@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\MedicalEspecialties;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -56,7 +55,6 @@ class DatabaseSeeder extends Seeder
         $this->seedModules();
         $this->seedPermissions();
         $this->seedSuperuserAssociations();
-        $this->seedMedicalEspecialties();
     }
 
     /**
@@ -237,15 +235,4 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /**
-     * Insert the default medical specialties (factory seed state) if the table is empty.
-     */
-    private function seedMedicalEspecialties(): void
-    {
-        if (MedicalEspecialties::query()->exists()) {
-            return;
-        }
-
-        MedicalEspecialties::factory()->count(5)->seed()->create();
-    }
 }
