@@ -6,6 +6,8 @@ use App\Models\Module;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\File;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -18,6 +20,15 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Locales the application supports. The first one is the
+     * default; subsequent ones are fallbacks. Keep in sync with
+     * the `LOCALES` array in `resources/js/composables/useI18n.ts`.
+     *
+     * @var list<string>
+     */
+    public const SUPPORTED_LOCALES = ['es', 'en'];
 
     /**
      * Determines the current asset version.
@@ -49,9 +60,6 @@ class HandleInertiaRequests extends Middleware
             return Module::query()->pluck('name')->all();
         }
 
-        // The user is "acting as" their active role. Compute the
-        // accessible modules for that single role, ignoring any other
-        // role they might happen to hold on top of it.
         $activeRole = $user->activeRole ?? $user->primaryRole();
 
         if ($activeRole === null) {
@@ -66,18 +74,111 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Return true if the user is currently acting as `superusuario`.
+     * Return the canonical `display_name` for every module the user
+     * can access, keyed by the module's kebab/snake `name`.
      *
-     * The user is considered a superuser only when the role they are
-     * currently active in is `superusuario`. Holding the role without
-     * being active in it is NOT enough — the user must have explicitly
-     * switched to it.
+     * The sidebar reads this map as the **source of truth** for the
+     * human-readable title shown next to each module icon.
+     *
+     * @return array<string, string>
+     */
+    private function moduleDisplayNamesForUser(User $user): array
+    {
+        $accessible = $this->accessibleModuleNames($user);
+
+        if ($accessible === []) {
+            return [];
+        }
+
+        return Module::query()
+            ->whereIn('name', $accessible)
+            ->pluck('display_name', 'name')
+            ->all();
+    }
+
+    /**
+     * Return true if the user is currently acting as `superusuario`.
      */
     private function userIsSuperuser(User $user): bool
     {
         $activeRole = $user->activeRole ?? $user->primaryRole();
 
         return $activeRole?->slug === Role::SUPERUSER_SLUG;
+    }
+
+    /**
+     * Resolve the active locale for this request, honouring the
+     * precedence:
+     *   1. `locale` query / body parameter (set by the LocaleController
+     *      just before redirecting).
+     *   2. `locale` stored in the session (the user's last choice).
+     *   3. `APP_LOCALE` from `.env`.
+     *
+     * Persists the resolved value back to the session so subsequent
+     * requests keep it, and pushes it onto the Laravel `App` facade
+     * so any `trans()` / `__()` call inside the request uses the same
+     * language.
+     */
+    private function resolveLocale(Request $request): string
+    {
+        $default = config('app.locale', self::SUPPORTED_LOCALES[0]);
+
+        $candidate = $request->input('locale')
+            ?? $request->session()->get('locale')
+            ?? $default;
+
+        if (! in_array($candidate, self::SUPPORTED_LOCALES, true)) {
+            $candidate = $default;
+        }
+
+        if (! in_array($candidate, self::SUPPORTED_LOCALES, true)) {
+            $candidate = self::SUPPORTED_LOCALES[0];
+        }
+
+        $request->session()->put('locale', $candidate);
+        App::setLocale($candidate);
+
+        return $candidate;
+    }
+
+    /**
+     * Load every `lang/<locale>/*.php` file into a single
+     * `{ [locale]: { ... } }` map, ready to ship to the frontend.
+     *
+     * Only loads files that exist on disk so a missing translation
+     * directory does not 500 the whole request; the frontend just
+     * shows English fallbacks.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function loadTranslations(): array
+    {
+        $result = [];
+
+        foreach (self::SUPPORTED_LOCALES as $locale) {
+            $base = lang_path($locale);
+
+            if (! File::isDirectory($base)) {
+                $result[$locale] = [];
+
+                continue;
+            }
+
+            $merged = [];
+            foreach (File::files($base) as $file) {
+                if ($file->getExtension() !== 'php') {
+                    continue;
+                }
+                $values = require $file->getPathname();
+                if (is_array($values)) {
+                    $merged = array_replace_recursive($merged, $values);
+                }
+            }
+
+            $result[$locale] = $merged;
+        }
+
+        return $result;
     }
 
     /**
@@ -101,9 +202,13 @@ class HandleInertiaRequests extends Middleware
             'icon_svg' => $role->icon_svg,
         ])->values()->all() ?? [];
 
+        $locale = $this->resolveLocale($request);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'locale' => $locale,
+            'translations' => $this->loadTranslations(),
             'auth' => [
                 'user' => $user ? [
                     'id' => $user->id,
@@ -122,6 +227,7 @@ class HandleInertiaRequests extends Middleware
                 'hasMultipleRoles' => (bool) (count($roles) > 1),
                 'isSuperuser' => $user ? $this->userIsSuperuser($user) : false,
                 'accessibleModules' => $user ? $this->accessibleModuleNames($user) : [],
+                'moduleDisplayNames' => $user ? $this->moduleDisplayNamesForUser($user) : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

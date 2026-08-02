@@ -11,12 +11,10 @@
  * @var list<array{name: string, display_name: string, description: string}>
  */
 return [
-    ['name' => 'users',        'display_name' => 'Users',        'description' => 'Gestión y administración de Users.'],
-    ['name' => 'roles',        'display_name' => 'Roles',        'description' => 'Gestión y administración de Roles.'],
-    ['name' => 'permissions',  'display_name' => 'Permissions',  'description' => 'Gestión y administración de Permissions.'],
-    ['name' => 'modules',      'display_name' => 'Modules',      'description' => 'Gestión y administración de Modules.'],
-    ['name' => 'patients',     'display_name' => 'Patients',     'description' => 'Gestión y administración de Patients.'],
-    ['name' => 'doctors',      'display_name' => 'Doctors',      'description' => 'Gestión y administración de Doctors.'],
-    ['name' => 'medical_especialties', 'display_name' => 'Medical Especialties', 'description' => 'Gestión y administración de Medical Especialties.'],
-    ['name' => 'allergies', 'display_name' => 'Allergies', 'description' => 'Gestión y administración de Allergies.'],
+    ['name' => 'users',        'display_name' => 'Usuarios',        'description' => 'Gestión y administración de Usuarios.'],
+    ['name' => 'roles',        'display_name' => 'Roles',           'description' => 'Gestión y administración de Roles.'],
+    ['name' => 'permissions',  'display_name' => 'Permisos',        'description' => 'Gestión y administración de Permisos.'],
+    ['name' => 'modules',      'display_name' => 'Módulos',         'description' => 'Gestión y administración de Módulos.'],
+    ['name' => 'patients',     'display_name' => 'Pacientes',       'description' => 'Gestión y administración de Pacientes.'],
+    ['name' => 'allergies', 'display_name' => 'Alergias', 'description' => 'Gestión y administración de Alergias.'],
 ];

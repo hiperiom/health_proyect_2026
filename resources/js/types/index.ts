@@ -7,10 +7,7 @@ export * from './permissions';
 
 export * from './modules';
 
-export * from './medicalespecialties';
-
 export * from './patients';
-export * from './doctors';
 
 export * from './allergies';
 export * from './health_backgrounds';

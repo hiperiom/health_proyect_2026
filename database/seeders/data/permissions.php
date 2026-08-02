@@ -41,17 +41,6 @@ return [
     ['name' => 'Update', 'slug' => 'patients.update', 'module' => 'patients', 'description' => 'Edit existing patients'],
     ['name' => 'Delete', 'slug' => 'patients.delete', 'module' => 'patients', 'description' => 'Delete patients'],
 
-    // Doctors
-    ['name' => 'View',   'slug' => 'doctors.read',   'module' => 'doctors', 'description' => 'View the doctors list and details'],
-    ['name' => 'Create', 'slug' => 'doctors.create', 'module' => 'doctors', 'description' => 'Create new doctors'],
-    ['name' => 'Update', 'slug' => 'doctors.update', 'module' => 'doctors', 'description' => 'Edit existing doctors'],
-    ['name' => 'Delete', 'slug' => 'doctors.delete', 'module' => 'doctors', 'description' => 'Delete doctors'],
-
-    // Medical Especialties
-    ['name' => 'View',   'slug' => 'medical_especialties.read',   'module' => 'medical_especialties', 'description' => 'View the medical_especialties list and details'],
-    ['name' => 'Create', 'slug' => 'medical_especialties.create', 'module' => 'medical_especialties', 'description' => 'Create new medical_especialties'],
-    ['name' => 'Update', 'slug' => 'medical_especialties.update', 'module' => 'medical_especialties', 'description' => 'Edit existing medical_especialties'],
-    ['name' => 'Delete', 'slug' => 'medical_especialties.delete', 'module' => 'medical_especialties', 'description' => 'Delete medical_especialties'],
     ['name' => 'View', 'slug' => 'allergies.read', 'module' => 'allergies', 'description' => 'View the Allergies list and details'],
     ['name' => 'Create', 'slug' => 'allergies.create', 'module' => 'allergies', 'description' => 'Create new Allergies'],
     ['name' => 'Update', 'slug' => 'allergies.update', 'module' => 'allergies', 'description' => 'Edit existing Allergies'],

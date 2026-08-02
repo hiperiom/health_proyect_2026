@@ -9,20 +9,20 @@ import { update } from '@/routes/password';
 
 defineOptions({
     layout: {
-        title: 'Update your password',
-        description: 'You need to set a new password before continuing.',
+        title: 'Actualizar tu contraseña',
+        description: 'Necesitas establecer una nueva contraseña antes de continuar.',
     },
 });
 </script>
 
 <template>
-    <Head title="Update Password" />
+    <Head title="Actualizar contraseña" />
 
     <div
         class="mb-4 rounded-md bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200"
     >
-        Your account was created with a temporary password. Please set a new
-        password to continue.
+        Tu cuenta fue creada con una contraseña temporal. Por favor establece
+        una nueva contraseña para continuar.
     </div>
 
     <Form
@@ -32,32 +32,32 @@ defineOptions({
         class="flex flex-col gap-6"
     >
         <div class="grid gap-2">
-            <Label for="password">New Password</Label>
+            <Label for="password">Nueva contraseña</Label>
             <PasswordInput
                 id="password"
                 name="password"
                 required
                 autofocus
                 autocomplete="new-password"
-                placeholder="New password"
+                placeholder="Nueva contraseña"
             />
             <InputError :message="errors.password" />
         </div>
 
         <div class="grid gap-2">
-            <Label for="password_confirmation">Confirm Password</Label>
+            <Label for="password_confirmation">Confirmar contraseña</Label>
             <PasswordInput
                 id="password_confirmation"
                 name="password_confirmation"
                 required
                 autocomplete="new-password"
-                placeholder="Confirm password"
+                placeholder="Confirmar contraseña"
             />
         </div>
 
         <Button type="submit" class="w-full" :disabled="processing">
             <Spinner v-if="processing" />
-            Update Password
+            Actualizar contraseña
         </Button>
     </Form>
 </template>

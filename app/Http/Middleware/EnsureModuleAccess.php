@@ -23,9 +23,11 @@ use Symfony\Component\HttpFoundation\Response;
  *   Route::middleware(['auth', EnsureModuleAccess::class])
  *       ->prefix('users')->name('users.')->group(...)
  *
- * The middleware resolves the module by matching the first URL
- * segment against `modules.name`. If no match is found, the request
- * is allowed through (the module simply has not been registered yet).
+ * The middleware extracts the module from the first URL segment,
+ * normalises it (replacing `_` with `-` and lower-casing), and looks
+ * it up in the `modules` table. If the route prefix does not match
+ * any registered module (e.g. `/settings`, `/dashboard`), the request
+ * is allowed through.
  */
 class EnsureModuleAccess
 {
@@ -43,15 +45,32 @@ class EnsureModuleAccess
             return $next($request);
         }
 
-        $moduleName = ltrim((string) $request->segment(1), '/');
+        $urlSegment = strtolower((string) $request->segment(1));
 
-        if ($moduleName === '') {
+        if ($urlSegment === '') {
             return $next($request);
         }
 
-        $moduleExists = Module::query()->where('name', $moduleName)->exists();
+        // Build a normalised lookup: `medicalespecialties` →
+        // `medical-Especialties` and `medical_especialties` →
+        // `medical_especialties`. The first match wins; the request is
+        // allowed through if no module matches (e.g. `/settings`,
+        // `/dashboard`, `/login`).
+        $candidates = array_unique(array_filter([
+            $urlSegment,
+            str_replace('_', '-', $urlSegment),
+        ]));
 
-        if (! $moduleExists) {
+        $matchedModuleName = null;
+        foreach ($candidates as $candidate) {
+            $exists = Module::query()->where('name', $candidate)->exists();
+            if ($exists) {
+                $matchedModuleName = $candidate;
+                break;
+            }
+        }
+
+        if ($matchedModuleName === null) {
             return $next($request);
         }
 
@@ -60,7 +79,7 @@ class EnsureModuleAccess
         // actually take effect.
         $userModuleNames = $activeRole?->modules()->pluck('name')->all() ?? [];
 
-        if (! in_array($moduleName, $userModuleNames, true)) {
+        if (! in_array($matchedModuleName, $userModuleNames, true)) {
             abort(403, 'No tienes acceso a este módulo.');
         }
 
