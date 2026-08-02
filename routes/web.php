@@ -1,8 +1,9 @@
 <?php
 
+use App\Http\Controllers\Allergies\AllergiesController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Doctors\DoctorController;
-use App\Http\Controllers\MedicalEspecialties\MedicalEspecialtiesController;
+use App\Http\Controllers\HealthBackgrounds\HealthBackgroundsController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Modules\ModuleController;
 use App\Http\Controllers\Patients\PatientPhotoController;
 use App\Http\Controllers\Patients\PatientsController;
@@ -16,6 +17,11 @@ use App\Http\Middleware\EnsureRoleSelection;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login')->name('home');
+
+// Locale switcher used by the frontend i18n composable. Must be
+// outside the `auth` group so the user can change the language on
+// the login screen (before being authenticated).
+Route::patch('/locale', [LocaleController::class, 'update'])->name('locale.update');
 
 Route::middleware(['auth', 'verified', EnsureRoleSelection::class])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -64,14 +70,6 @@ Route::middleware(['auth', EnsureModuleAccess::class])->prefix('modules')->name(
     Route::delete('/{item}', [ModuleController::class, 'destroy'])->name('destroy');
 });
 
-Route::middleware(['auth', EnsureModuleAccess::class])->prefix('medicalespecialties')->name('medicalespecialties.')->group(function () {
-    Route::get('/', [MedicalEspecialtiesController::class, 'index'])->name('index');
-    Route::post('/', [MedicalEspecialtiesController::class, 'store'])->name('store');
-    Route::get('/{item}/edit', [MedicalEspecialtiesController::class, 'edit'])->name('edit');
-    Route::patch('/{item}', [MedicalEspecialtiesController::class, 'update'])->name('update');
-    Route::delete('/{item}', [MedicalEspecialtiesController::class, 'destroy'])->name('destroy');
-});
-
 Route::middleware(['auth', EnsureModuleAccess::class])->prefix('patients')->name('patients.')->group(function () {
     Route::get('/', [PatientsController::class, 'index'])->name('index');
     Route::post('/', [PatientsController::class, 'store'])->name('store');
@@ -84,28 +82,31 @@ Route::middleware(['auth', EnsureModuleAccess::class])->prefix('patients')->name
     Route::delete('/{item}/photo', [PatientPhotoController::class, 'destroy'])->name('photo.destroy');
 });
 
-Route::middleware(['auth', EnsureModuleAccess::class])->prefix('doctors')->name('doctors.')->group(function () {
-    Route::get('/', [DoctorController::class, 'index'])->name('index');
-    Route::post('/', [DoctorController::class, 'store'])->name('store');
-    Route::get('/{item}/edit', [DoctorController::class, 'edit'])->name('edit');
-    Route::patch('/{item}', [DoctorController::class, 'update'])->name('update');
-    Route::delete('/{item}', [DoctorController::class, 'destroy'])->name('destroy');
-});
-use App\Http\Controllers\Allergies\AllergiesController;
-
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('allergies', [AllergiesController::class, 'index'])->name('allergies.index');
     Route::post('allergies', [AllergiesController::class, 'store'])->name('allergies.store');
     Route::get('allergies/{item}/edit', [AllergiesController::class, 'edit'])->name('allergies.edit');
     Route::patch('allergies/{item}', [AllergiesController::class, 'update'])->name('allergies.update');
     Route::delete('allergies/{item}', [AllergiesController::class, 'destroy'])->name('allergies.destroy');
-});
-use App\Http\Controllers\HealthBackgrounds\HealthBackgroundsController;
 
-Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('health-backgrounds', [HealthBackgroundsController::class, 'index'])->name('health-backgrounds.index');
     Route::post('health-backgrounds', [HealthBackgroundsController::class, 'store'])->name('health-backgrounds.store');
     Route::get('health-backgrounds/{item}/edit', [HealthBackgroundsController::class, 'edit'])->name('health-backgrounds.edit');
     Route::patch('health-backgrounds/{item}', [HealthBackgroundsController::class, 'update'])->name('health-backgrounds.update');
     Route::delete('health-backgrounds/{item}', [HealthBackgroundsController::class, 'destroy'])->name('health-backgrounds.destroy');
+});
+use App\Http\Controllers\Doctors\DoctorsController;
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('doctors', [DoctorsController::class, 'index'])->name('doctors.index');
+    Route::post('doctors', [DoctorsController::class, 'store'])->name('doctors.store');
+    Route::get('doctors/{item}/edit', [DoctorsController::class, 'edit'])->name('doctors.edit');
+    Route::patch('doctors/{item}', [DoctorsController::class, 'update'])->name('doctors.update');
+    Route::delete('doctors/{item}', [DoctorsController::class, 'destroy'])->name('doctors.destroy');
+});use App\Http\Controllers\MedicalSpecialties\MedicalSpecialtiesController;
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('medical-specialties', [MedicalSpecialtiesController::class, 'index'])->name('medical-specialties.index');
+    Route::post('medical-specialties', [MedicalSpecialtiesController::class, 'store'])->name('medical-specialties.store');
+    Route::get('medical-specialties/{item}/edit', [MedicalSpecialtiesController::class, 'edit'])->name('medical-specialties.edit');
+    Route::patch('medical-specialties/{item}', [MedicalSpecialtiesController::class, 'update'])->name('medical-specialties.update');
+    Route::delete('medical-specialties/{item}', [MedicalSpecialtiesController::class, 'destroy'])->name('medical-specialties.destroy');
 });

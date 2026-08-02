@@ -1,5 +1,10 @@
-﻿import { createInertiaApp } from '@inertiajs/vue3';
+﻿import '../css/app.css';
+
+import { createInertiaApp } from '@inertiajs/vue3';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import { createSSRApp, h, type DefineComponent } from 'vue';
 import { initializeTheme } from '@/composables/useAppearance';
+import { bootstrapI18nFromInertia } from '@/composables/useI18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 import RoleSelectLayout from '@/layouts/auth/RoleSelectLayout.vue';
@@ -36,7 +41,25 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
-});
+    resolve: (name) =>
+        resolvePageComponent<DefineComponent>(
+            `./pages/${name}.vue`,
+            import.meta.glob<DefineComponent>('./pages/**/*.vue'),
+        ),
+    setup: ({ el, App, props, plugin }) => {
+        const app = createSSRApp({
+            render: () => h(App, props),
+        });
 
-initializeTheme();
-initializeFlashToast();
+        app.use(plugin);
+        app.mount(el);
+
+        // Wire the i18n composable to the Inertia page props. Must
+        // run after `app.mount(el)` so `usePage()` resolves against
+        // the mounted Vue app.
+        bootstrapI18nFromInertia();
+    },
+}).then(() => {
+    initializeTheme();
+    initializeFlashToast();
+});
