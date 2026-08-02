@@ -107,9 +107,10 @@ class MakeCrudCommand extends Command
 
         if ($this->option('migrate')) {
             $this->info('Running migration...');
-            $this->call('migrate');
+            $this->call('migrate:fresh --seed');
         }
-        if (! $this->option('skip-tests')) {
+        $skiptests = $this->option('skip-tests') ? true : false;
+        if (! $skiptests ) {
             $this->newLine();
             $this->info('Ejecutando auditoria de tests criticos del modulo recien creado...');
             // Invoke test:modules scoped to the module we just generated.
