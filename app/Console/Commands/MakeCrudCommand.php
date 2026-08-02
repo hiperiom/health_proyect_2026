@@ -83,6 +83,12 @@ class MakeCrudCommand extends Command
 
         $this->newLine();
 
+        // Persist the new module + CRUD permissions into the seed data
+        // files BEFORE `migrate:fresh --seed` runs, so the registry
+        // survives any future `migrate:fresh` (the files are read by
+        // `DatabaseSeeder::seedModules()` and `seedPermissions()`).
+        $this->appendToSeedDataFiles($config);
+
         $wantsFresh = $this->option('fresh') || true;
 
         if ($wantsFresh) {
@@ -1086,5 +1092,113 @@ export const defaultModuleSidebarEntry: ModuleSidebarConfig = {
     icon: FileText,
 };
 TPL;
+    }
+
+    /**
+     * Persist the freshly generated module into the seed data files
+     * so that the next `migrate:fresh --seed` rebuilds the same
+     * registry automatically.
+     *
+     * Files updated:
+     *   - database/seeders/data/modules.php
+     *       Adds the module row (name, display_name, description).
+     *   - database/seeders/data/permissions.php
+     *       Adds the four CRUD permissions (read, create, update, delete).
+     *
+     * Both files are read by DatabaseSeeder::seedModules() and
+     * DatabaseSeeder::seedPermissions(). This method is idempotent:
+     * re-running `make:crud` will not produce duplicate rows.
+     *
+     * It is invoked BEFORE `migrate:fresh --seed` so the freshly
+     * recreated rows are already present in the seed pipeline.
+     */
+    protected function appendToSeedDataFiles(array $config): void
+    {
+        $moduleKey = $config['modelNameKebabCase'];
+        $tableName = $config['modelNameTable'];
+        $displayName = $config['modelTitle'];
+        $description = "Gestión y administración de {$displayName}.";
+
+        $this->appendModuleToSeedFile($moduleKey, $displayName, $description);
+        $this->appendPermissionsToSeedFile($moduleKey, $tableName, $displayName);
+
+        $this->info("✔ Seeder de modules y permissions actualizado para \"{$moduleKey}\".");
+    }
+
+    /**
+     * Append a single row to `database/seeders/data/modules.php` for the
+     * freshly generated module. Skips silently when the key already
+     * exists so the command remains idempotent.
+     */
+    protected function appendModuleToSeedFile(string $moduleKey, string $displayName, string $description): void
+    {
+        $path = database_path('seeders/data/modules.php');
+        if (! File::exists($path)) {
+            $this->warn("No se encontró {$path}. Se omite la actualización del seeder de modules.");
+
+            return;
+        }
+
+        $content = File::get($path);
+
+        // Idempotency: bail out if the module is already in the seed data.
+        if (Str::contains($content, "'{$moduleKey}'")) {
+            $this->warn("El módulo \"{$moduleKey}\" ya está en el seeder de modules. Se omite.");
+
+            return;
+        }
+
+        $entry = "    ['name' => '{$moduleKey}', 'display_name' => '{$displayName}', 'description' => '{$description}'],";
+        // Inject right before the closing `];` of the returned array.
+        $content = preg_replace(
+            '/(\s*\];)(\s*)$/',
+            PHP_EOL.$entry.PHP_EOL.'$1$2',
+            $content,
+            1
+        );
+
+        File::put($path, $content);
+    }
+
+    /**
+     * Append the four default CRUD permissions to
+     * `database/seeders/data/permissions.php`. Skips silently when
+     * the module already has entries, so the command remains idempotent.
+     */
+    protected function appendPermissionsToSeedFile(string $moduleKey, string $tableName, string $displayName): void
+    {
+        $path = database_path('seeders/data/permissions.php');
+        if (! File::exists($path)) {
+            $this->warn("No se encontró {$path}. Se omite la actualización del seeder de permissions.");
+
+            return;
+        }
+
+        $content = File::get($path);
+
+        if (Str::contains($content, "'{$moduleKey}.read'")) {
+            $this->warn("Los permisos para \"{$moduleKey}\" ya están en el seeder de permissions. Se omite.");
+
+            return;
+        }
+
+        $block = <<<PHP
+
+            // {$displayName}
+            ['name' => 'View',   'slug' => '{$moduleKey}.read',   'module' => '{$moduleKey}', 'description' => 'View the {$displayName} list and details'],
+            ['name' => 'Create', 'slug' => '{$moduleKey}.create', 'module' => '{$moduleKey}', 'description' => 'Create new {$displayName}'],
+            ['name' => 'Update', 'slug' => '{$moduleKey}.update', 'module' => '{$moduleKey}', 'description' => 'Edit existing {$displayName}'],
+            ['name' => 'Delete', 'slug' => '{$moduleKey}.delete', 'module' => '{$moduleKey}', 'description' => 'Delete {$displayName}'],
+        PHP;
+
+        // Inject right before the closing `];` of the returned array.
+        $content = preg_replace(
+            '/(\s*\];)(\s*)$/',
+            $block.'$1$2',
+            $content,
+            1
+        );
+
+        File::put($path, $content);
     }
 }
