@@ -102,4 +102,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('doctors/{item}/edit', [DoctorsController::class, 'edit'])->name('doctors.edit');
     Route::patch('doctors/{item}', [DoctorsController::class, 'update'])->name('doctors.update');
     Route::delete('doctors/{item}', [DoctorsController::class, 'destroy'])->name('doctors.destroy');
+});use App\Http\Controllers\MedicalSpecialties\MedicalSpecialtiesController;
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('medical-specialties', [MedicalSpecialtiesController::class, 'index'])->name('medical-specialties.index');
+    Route::post('medical-specialties', [MedicalSpecialtiesController::class, 'store'])->name('medical-specialties.store');
+    Route::get('medical-specialties/{item}/edit', [MedicalSpecialtiesController::class, 'edit'])->name('medical-specialties.edit');
+    Route::patch('medical-specialties/{item}', [MedicalSpecialtiesController::class, 'update'])->name('medical-specialties.update');
+    Route::delete('medical-specialties/{item}', [MedicalSpecialtiesController::class, 'destroy'])->name('medical-specialties.destroy');
 });

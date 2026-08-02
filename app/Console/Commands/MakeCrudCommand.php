@@ -107,7 +107,7 @@ class MakeCrudCommand extends Command
 
         if ($this->option('migrate')) {
             $this->info('Running migration...');
-            $this->call('migrate:fresh --seed');
+            $this->call('migrate:fresh');
         }
         $skiptests = $this->option('skip-tests') ? true : false;
         if (! $skiptests ) {

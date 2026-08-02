@@ -50,4 +50,9 @@ return [
     ['name' => 'Create', 'slug' => 'doctors.create', 'module' => 'doctors', 'description' => 'Create new Doctores'],
     ['name' => 'Update', 'slug' => 'doctors.update', 'module' => 'doctors', 'description' => 'Edit existing Doctores'],
     ['name' => 'Delete', 'slug' => 'doctors.delete', 'module' => 'doctors', 'description' => 'Delete Doctores'],
+    // Especialidades Médicas
+    ['name' => 'View',   'slug' => 'medical-specialties.read',   'module' => 'medical-specialties', 'description' => 'View the Especialidades Médicas list and details'],
+    ['name' => 'Create', 'slug' => 'medical-specialties.create', 'module' => 'medical-specialties', 'description' => 'Create new Especialidades Médicas'],
+    ['name' => 'Update', 'slug' => 'medical-specialties.update', 'module' => 'medical-specialties', 'description' => 'Edit existing Especialidades Médicas'],
+    ['name' => 'Delete', 'slug' => 'medical-specialties.delete', 'module' => 'medical-specialties', 'description' => 'Delete Especialidades Médicas'],
 ];

@@ -1,0 +1,69 @@
+<?php
+
+use App\Models\MedicalSpecialty;
+use App\Models\Role;
+use App\Models\User;
+
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\post;
+
+beforeEach(function () {
+    $this->role = Role::query()->firstOrCreate(
+        ['slug' => 'superusuario'],
+        ['name' => 'Superusuario']
+    );
+
+    $this->user = User::factory()->create();
+    $this->user->roles()->sync([$this->role->id]);
+});
+
+it('creates a Medical Specialty through the form', function () {
+    $payload = [
+        'name' => 'Test Medical Specialty',
+        'description' => 'Test description',
+        'value' => '100',
+    ];
+
+    $response = actingAs($this->user)
+        ->post(route('medical-specialties.store'), $payload)
+        ->assertStatus(302);
+
+    expect($response->headers->get('Location'))->toBe(route('medical-specialties.index'));
+
+    $this->assertDatabaseHas('medical-specialties', [
+        'name' => 'Test Medical Specialty',
+    ]);
+});
+
+it('requires name on store', function () {
+    actingAs($this->user)
+        ->post(route('medical-specialties.store'), [
+            'description' => 'No name provided',
+        ])
+        ->assertSessionHasErrors('name');
+});
+
+it('rejects a name longer than 255 chars on store', function () {
+    actingAs($this->user)
+        ->post(route('medical-specialties.store'), [
+            'name' => str_repeat('a', 256),
+        ])
+        ->assertSessionHasErrors('name');
+});
+
+it('allows null description and value on store', function () {
+    actingAs($this->user)
+        ->post(route('medical-specialties.store'), [
+            'name' => 'Minimal record',
+        ])
+        ->assertStatus(302);
+
+    $this->assertDatabaseHas('medical-specialties', [
+        'name' => 'Minimal record',
+    ]);
+});
+
+it('redirects guests to login on store', function () {
+    post(route('medical-specialties.store'), ['name' => 'Guest attempt'])
+        ->assertRedirect('/login');
+});
