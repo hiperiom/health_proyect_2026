@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
 import { Camera, Trash, Upload, User as UserIcon } from '@lucide/vue';
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { onBeforeUnmount, ref, nextTick, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,7 +47,21 @@ const MAX_BYTES = 5 * 1024 * 1024;
 watch(
     () => props.initialPhotoUrl,
     (value) => {
-        photoUrl.value = value;
+        if (value !== null || photoUrl.value === null) {
+            photoUrl.value = value;
+        }
+    },
+);
+
+watch(
+    cropDialogOpen,
+    (open) => {
+        if (!open) {
+            destroyCropper();
+            previewSrc.value = null;
+            pendingFile.value = null;
+            cropError.value = null;
+        }
     },
 );
 
@@ -139,13 +153,15 @@ function destroyCropper() {
     cropper.value = null;
 }
 
-watch(cropDialogOpen, (open) => {
+watch(cropDialogOpen, async (open) => {
     if (open) {
-        requestAnimationFrame(initCropper);
+        await nextTick();
+        initCropper();
     } else {
         destroyCropper();
         previewSrc.value = null;
         pendingFile.value = null;
+        cropError.value = null;
     }
 });
 
@@ -198,6 +214,12 @@ async function applyCrop() {
         const filename = pendingFile.value?.name ?? 'photo.jpg';
         formData.append('photo', blob, filename);
 
+        const localPreview = await new Promise<string | null>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string | null);
+            reader.readAsDataURL(blob);
+        });
+
         router.post(props.uploadUrl, formData, {
             forceFormData: true,
             preserveScroll: true,
@@ -206,9 +228,14 @@ async function applyCrop() {
                     pageResponse.props as {
                         flash?: { userProfilePhotoUrl?: string | null };
                     }
+                ).flash?.userProfilePhotoUrl ?? (
+                    page.props as {
+                        flash?: { userProfilePhotoUrl?: string | null };
+                    }
                 ).flash?.userProfilePhotoUrl;
-                const newUrl = flashed ?? photoUrl.value;
-                setPhotoUrl(newUrl ?? null);
+                const newUrl = flashed ?? localPreview ?? null;
+                setPhotoUrl(newUrl);
+                emit('updated', newUrl);
                 cropDialogOpen.value = false;
             },
             onError: (errors) => {
@@ -264,6 +291,7 @@ onBeforeUnmount(() => {
                 <img
                     v-if="photoUrl"
                     :src="photoUrl"
+                    :key="photoUrl"
                     alt="Foto del usuario"
                     class="h-full w-full object-cover"
                 />
@@ -306,8 +334,8 @@ onBeforeUnmount(() => {
             @change="onFileChange"
         />
 
-        <Dialog v-model:open="cropDialogOpen">
-            <DialogContent class="sm:max-w-xl">
+        <Dialog v-model:open="cropDialogOpen" :modal="false">
+            <DialogContent class="sm:max-w-xl z-[60]">
                 <DialogHeader>
                     <DialogTitle>Recortar Fotografía</DialogTitle>
                     <DialogDescription>

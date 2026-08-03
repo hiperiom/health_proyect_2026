@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\MedicalSpecialty;
 use App\Models\Role;
 use App\Models\User;
 

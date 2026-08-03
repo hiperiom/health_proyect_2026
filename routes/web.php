@@ -34,6 +34,7 @@ Route::middleware(['auth', EnsureModuleAccess::class])->prefix('users')->name('u
     Route::get('/', [UserController::class, 'index'])->name('index');
     Route::post('/', [UserController::class, 'store'])->name('store');
     Route::get('/check-email', [UserController::class, 'checkEmail'])->name('check-email');
+    Route::get('/check-dni', [UserController::class, 'checkDni'])->name('check-dni');
     Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
     Route::patch('/{user}', [UserController::class, 'update'])->name('update');
     Route::patch('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');

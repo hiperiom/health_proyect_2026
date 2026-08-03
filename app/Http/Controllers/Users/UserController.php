@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\AssignRolesRequest;
+use App\Http\Requests\Users\CheckDniRequest;
 use App\Http\Requests\Users\CheckEmailRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
@@ -260,6 +261,19 @@ class UserController extends Controller
         $exists = User::query()
             ->when($ignoreUserId !== null, fn ($query) => $query->where('id', '!=', $ignoreUserId))
             ->where('email', $email)
+            ->exists();
+
+        return response()->json(['exists' => $exists]);
+    }
+
+    public function checkDni(CheckDniRequest $request): JsonResponse
+    {
+        $dni = trim((string) $request->validated('dni'));
+        $ignoreUserId = $request->validated('ignore_id');
+
+        $exists = UsersProfile::query()
+            ->when($ignoreUserId !== null, fn ($query) => $query->where('user_id', '!=', $ignoreUserId))
+            ->where('dni', $dni)
             ->exists();
 
         return response()->json(['exists' => $exists]);

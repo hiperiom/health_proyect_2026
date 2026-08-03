@@ -157,6 +157,14 @@ const emailMessage = ref<string | null>(null);
 let emailCheckAbort: AbortController | null = null;
 let emailCheckSeq = 0;
 
+const dniValue = ref<string>(props.item?.dni ?? '');
+const dniChecking = ref(false);
+const dniExists = ref(false);
+const dniMessage = ref<string | null>(null);
+
+let dniCheckAbort: AbortController | null = null;
+let dniCheckSeq = 0;
+
 let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
 function applyFilters() {
@@ -193,6 +201,16 @@ watch(roleFilter, () => applyFilters());
 watch(perPage, () => applyFilters());
 
 watch(
+    open,
+    (isOpen) => {
+        if (!isOpen) {
+            editingItem.value = null;
+            selectedRoleIds.value = [];
+        }
+    },
+);
+
+watch(
     () => page.props.errors,
     (errors: Record<string, string> | undefined) => {
         roleError.value = errors?.role_ids ?? null;
@@ -204,14 +222,22 @@ watch(
     () => editingItem.value?.id ?? null,
     (id) => {
         emailValue.value = id ? (editingItem.value?.email ?? '') : '';
+        dniValue.value = id ? (editingItem.value?.dni ?? '') : '';
         emailCheckSeq += 1;
+        dniCheckSeq += 1;
 
         if (emailCheckAbort) {
             emailCheckAbort.abort();
         }
 
+        if (dniCheckAbort) {
+            dniCheckAbort.abort();
+        }
+
         emailChecking.value = false;
+        dniChecking.value = false;
         resetEmailState();
+        resetDniState();
     },
 );
 
@@ -226,15 +252,28 @@ watch(emailValue, (value) => {
     }
 });
 
+watch(dniValue, (value) => {
+    if (dniMessage.value !== null || dniExists.value) {
+        dniMessage.value = null;
+        dniExists.value = false;
+    }
+
+    if (value.trim().length > 0) {
+        validateDni();
+    }
+});
+
 function openEditSheet(item: UserModel) {
     editingItem.value = item;
     selectedRoleIds.value = item.role_ids ?? [];
+    profileOpen.value = true;
     open.value = true;
 }
 
 function openCreateSheet() {
     editingItem.value = null;
     selectedRoleIds.value = [];
+    profileOpen.value = true;
     open.value = true;
 }
 
@@ -345,11 +384,18 @@ function resetEmailState(): void {
     emailMessage.value = null;
 }
 
+function resetDniState(): void {
+    dniExists.value = false;
+    dniMessage.value = null;
+}
+
 function closeSheet(): void {
     open.value = false;
     editingItem.value = null;
     resetEmailState();
+    resetDniState();
     emailValue.value = '';
+    dniValue.value = '';
 }
 
 async function validateEmail(): Promise<void> {
@@ -414,6 +460,72 @@ async function validateEmail(): Promise<void> {
     } finally {
         if (seq === emailCheckSeq) {
             emailChecking.value = false;
+        }
+    }
+}
+
+async function validateDni(): Promise<void> {
+    const value = dniValue.value.trim();
+
+    if (value.length === 0) {
+        resetDniState();
+
+        return;
+    }
+
+    if (dniCheckAbort) {
+        dniCheckAbort.abort();
+    }
+
+    const controller = new AbortController();
+    dniCheckAbort = controller;
+    const seq = ++dniCheckSeq;
+
+    dniChecking.value = true;
+
+    try {
+        const url = `/users/check-dni?dni=${encodeURIComponent(value)}${
+            editingItem.value?.id ? `&ignore_id=${editingItem.value.id}` : ''
+        }`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            signal: controller.signal,
+        });
+
+        if (seq !== dniCheckSeq) {
+            return;
+        }
+
+        if (!response.ok) {
+            resetDniState();
+
+            return;
+        }
+
+        const payload = (await response.json()) as { exists: boolean };
+
+        if (payload.exists) {
+            dniExists.value = true;
+            dniMessage.value = 'Este número de documento ya está en uso.';
+        } else {
+            resetDniState();
+            dniMessage.value = 'Número de documento disponible.';
+        }
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+        }
+
+        resetDniState();
+    } finally {
+        if (seq === dniCheckSeq) {
+            dniChecking.value = false;
         }
     }
 }
@@ -548,7 +660,7 @@ const startTour = () => {
                 >
                     <HelpCircle class="h-4 w-4" />
                 </Button>
-                <Sheet v-model:open="open" @update:open="(value) => { open.value = value; if (!value) { editingItem.value = null; } }">
+                <Sheet v-model:open="open" @update:open="(value) => { if (!value) { editingItem.value = null; } }">
                     <SheetTrigger as-child>
                         <Button id="tour-new-btn" @click="openCreateSheet">
                             <Plus class="h-4 w-4" />
@@ -694,10 +806,18 @@ const startTour = () => {
                                 <CollapsibleContent
                                     class="space-y-4 border-t px-4 py-4"
                                 >
-                                    <div>
+                                    <div v-if="!editingItem">
+                                        <Label>Fotografía</Label>
+                                        <p
+                                            class="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
+                                        >
+                                            La fotografía se podrá cargar después de
+                                            crear el usuario.
+                                        </p>
+                                    </div>
+                                    <div v-else>
                                         <UsersProfilePhotoUploader
-                                            v-if="editingItem?.usersProfileId"
-                                            :users-profile-id="editingItem.usersProfileId"
+                                            :users-profile-id="editingItem.usersProfileId ?? 0"
                                             :initial-photo-url="
                                                 editingItem.photoUrl ?? null
                                             "
@@ -705,15 +825,6 @@ const startTour = () => {
                                             :destroy-url="`/users/${editingItem.id}/photo`"
                                             @updated="onPhotoUpdated"
                                         />
-                                        <div v-else>
-                                            <Label>Fotografía</Label>
-                                            <p
-                                                class="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
-                                            >
-                                                La fotografía se podrá cargar
-                                                después de crear el usuario.
-                                            </p>
-                                        </div>
                                     </div>
                                     <div class="grid grid-cols-2 gap-3">
                                         <div class="grid gap-2">
@@ -805,15 +916,41 @@ const startTour = () => {
                                             <Input
                                                 id="dni"
                                                 name="dni"
-                                                :default-value="
-                                                    editingItem?.dni ?? ''
-                                                "
+                                                v-model="dniValue"
                                                 placeholder="12345678"
                                                 required
                                             />
                                             <InputError
                                                 :message="errors.dni"
                                             />
+                                            <p
+                                                v-if="dniChecking"
+                                                class="text-xs text-muted-foreground"
+                                            >
+                                                Verificando número de documento...
+                                            </p>
+                                            <p
+                                                v-else-if="
+                                                    dniExists && dniMessage
+                                                "
+                                                class="flex items-start gap-1 text-xs text-destructive"
+                                            >
+                                                <AlertCircle
+                                                    class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                                />
+                                                <span>{{ dniMessage }}</span>
+                                            </p>
+                                            <p
+                                                v-else-if="
+                                                    dniMessage && !dniExists
+                                                "
+                                                class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
+                                            >
+                                                <CheckCircle2
+                                                    class="h-3.5 w-3.5"
+                                                />
+                                                <span>{{ dniMessage }}</span>
+                                            </p>
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-2 gap-3">
@@ -928,7 +1065,7 @@ const startTour = () => {
                                 </SheetClose>
                                 <Button
                                     type="submit"
-                                    :disabled="processing || emailExists"
+                                    :disabled="processing || emailExists || dniExists"
                                 >
                                     {{ editingItem ? 'Actualizar' : 'Crear' }}
                                 </Button>

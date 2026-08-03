@@ -148,6 +148,7 @@ class User extends Authenticatable implements PasskeyUser
      *     1) the user's directly assigned permissions (`users_permissions`)
      *     2) permissions enabled for the active role via the
      *        `roles_modules_permissions` pivot.
+     *
      * @return array<int, string>
      */
     public function permissionSlugs(): array
