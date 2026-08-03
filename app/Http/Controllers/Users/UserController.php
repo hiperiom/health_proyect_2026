@@ -62,10 +62,48 @@ class UserController extends Controller
                 $allRoles = $user->roles;
                 $profile = $user->usersProfile->first();
 
+                $profileCompletionFields = [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'photo_path' => $profile?->photo_path,
+                    'first_name' => $profile?->first_name,
+                    'last_name' => $profile?->last_name,
+                    'nacionality' => $profile?->nacionality,
+                    'dni' => $profile?->dni,
+                    'birth_date' => $profile?->birth_date,
+                    'gender' => $profile?->gender,
+                    'phone_mobile' => $profile?->phone_mobile,
+                ];
+
+                $profileCompletionLabels = [
+                    'name' => 'Nombre',
+                    'email' => 'Correo electrónico',
+                    'photo_path' => 'Fotografía',
+                    'first_name' => 'Nombres',
+                    'last_name' => 'Apellidos',
+                    'nacionality' => 'Nacionalidad',
+                    'dni' => 'Número de documento',
+                    'birth_date' => 'Fecha de nacimiento',
+                    'gender' => 'Género',
+                    'phone_mobile' => 'Teléfono móvil',
+                ];
+
+                $missingFields = collect($profileCompletionFields)
+                    ->filter(fn ($value): bool => $value === null)
+                    ->map(fn ($value, $key): string => $profileCompletionLabels[$key])
+                    ->values()
+                    ->all();
+
+                $filledFields = count($profileCompletionFields) - count($missingFields);
+
+                $profileCompletion = (int) round(($filledFields / count($profileCompletionFields)) * 100);
+
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'profileCompletion' => $profileCompletion,
+                    'missingFields' => $missingFields,
                     'status' => $user->status?->value,
                     'statusLabel' => $user->status?->label(),
                     'statusColorClass' => $user->status?->colorClass(),

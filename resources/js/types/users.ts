@@ -44,6 +44,8 @@ export type UserModel = {
     id: number;
     name: string;
     email: string;
+    profileCompletion: number;
+    missingFields: string[];
     role: string | null;
     roleName?: string | null;
     roles?: UserRole[];

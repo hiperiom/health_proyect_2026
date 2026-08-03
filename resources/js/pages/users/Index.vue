@@ -1222,6 +1222,7 @@ const startTour = () => {
                         </th>
                         <th class="px-4 py-3 font-medium">Estatus</th>
                         <th class="px-4 py-3 font-medium">Rol</th>
+                        <th class="px-4 py-3 font-medium">Progreso</th>
                         <th
                             class="px-4 py-3 text-right font-medium"
                             id="tour-actions"
@@ -1299,6 +1300,53 @@ const startTour = () => {
                                 Indefinido
                             </span>
                         </td>
+                        <td class="px-4 py-3">
+                            <div class="group relative flex items-center gap-2">
+                                <div
+                                    class="h-2 w-24 overflow-hidden rounded-full bg-muted"
+                                >
+                                    <div
+                                        class="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 transition-all duration-300"
+                                        :style="{
+                                            width: `${item.profileCompletion}%`,
+                                        }"
+                                    ></div>
+                                </div>
+                                <span class="text-xs tabular-nums text-muted-foreground">
+                                    {{ item.profileCompletion }}%
+                                </span>
+                                <div
+                                    class="pointer-events-none absolute top-full left-1/2 z-50 mt-2 hidden w-56 -translate-x-1/2 rounded-md border bg-popover p-3 text-xs text-popover-foreground shadow-lg group-hover:block"
+                                >
+                                    <p class="mb-2 font-semibold">
+                                        {{ item.profileCompletion }}% completado
+                                        ({{
+                                            item.missingFields.length
+                                        }}
+                                        de 10 campos vacíos)
+                                    </p>
+                                    <template v-if="item.missingFields.length > 0">
+                                        <p class="mb-1 text-muted-foreground">
+                                            Datos faltantes:
+                                        </p>
+                                        <ul class="max-h-32 list-disc space-y-0.5 overflow-y-auto pl-4">
+                                            <li
+                                                v-for="field in item.missingFields"
+                                                :key="field"
+                                            >
+                                                {{ field }}
+                                            </li>
+                                        </ul>
+                                    </template>
+                                    <p
+                                        v-else
+                                        class="text-emerald-600 dark:text-emerald-400"
+                                    >
+                                        ✅ Todos los datos completados
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end">
                                 <DropdownMenu>
@@ -1345,7 +1393,7 @@ const startTour = () => {
                     </tr>
                     <tr v-if="!items.data.length">
                         <td
-                            colspan="6"
+                            colspan="7"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
                             No se encontraron usuarios.
