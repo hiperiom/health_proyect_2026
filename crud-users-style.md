@@ -104,7 +104,7 @@ routes/web.php                                      (registrar grupo de rutas)
 tests/Feature/{Model}s/IndexTest.php
 ```
 
-> **Importante**: la carpeta singular se llama **`{Model}s`** (con `s` final) salvo que `{Model}` ya termine en `s` (p. ej. `Patients` → carpeta `Patients/`, **no** `Patientss/`). El comando `make:crud` actual tiene un bug conocido para este caso; corregir manualmente si aplica.
+> **Importante**: la carpeta singular se llama **`{Model}s`** (con `s` final) salvo que `{Model}` ya termine en `s` (p. ej. `UsersProfile` → carpeta `UsersProfiles/`, **no** `UsersProfiles/`). El comando `make:crud` actual tiene un bug conocido para este caso; corregir manualmente si aplica.
 
 ---
 
@@ -316,7 +316,7 @@ type Props = {
 
 - Importar la ruta: `import { index as {plural}Index } from '@/routes/{plural}';`.
 - **Icono** sugerido por defecto: `FileText` para módulos genéricos, `Users` para módulos de usuarios, `Stethoscope` para doctores/especialidades, `CalendarDays` para citas, `ReceiptText` para facturas, `Tag` para categorías. Verificar que el icono esté disponible en `@lucide/vue` y agregarlo al `import { ... } from '@lucide/vue';` existente.
-- Si la entrada debe ser condicional por permisos (estilo `canPatients`), envolver con `v-if="userCan('{plural}.view')"` o equivalente del proyecto.
+- Si la entrada debe ser condicional por permisos (estilo `canUsersProfiles`), envolver con `v-if="userCan('{plural}.view')"` o equivalente del proyecto.
 
 ---
 

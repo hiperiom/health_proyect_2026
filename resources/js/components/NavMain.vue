@@ -26,7 +26,7 @@ defineProps<{
 const page = usePage();
 
 /**
- * Current request URL (e.g. "/patients" or "/patients?page=2").
+ * Current request URL (e.g. "/users" or "/users?page=2").
  * Inertia always provides this; falling back to window.location covers
  * the rare SSR/hard-load edge case.
  */
@@ -42,7 +42,7 @@ const currentUrl = computed<string>(() => {
  * Normalise an href for comparison:
  *   - treat null/undefined as inactive
  *   - strip the query string and trailing slash
- *   - prepend "/" when the href is relative (e.g. "patients" → "/patients")
+ *   - prepend "/" when the href is relative (e.g. "users" → "/users")
  */
 const normalizeHref = (href?: string | null): string => {
     if (!href) {

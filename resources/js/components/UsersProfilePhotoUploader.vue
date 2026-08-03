@@ -16,7 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 import 'cropperjs/dist/cropper.css';
 
 type Props = {
-    patientId: number;
+    usersProfileId: number;
     initialPhotoUrl: string | null;
     uploadUrl: string;
     destroyUrl: string;
@@ -53,8 +53,8 @@ watch(
 
 watch(
     () =>
-        (page.props as { flash?: { patientPhotoUrl?: string | null } }).flash
-            ?.patientPhotoUrl,
+        (page.props as { flash?: { userProfilePhotoUrl?: string | null } }).flash
+            ?.userProfilePhotoUrl,
     (value) => {
         if (value === undefined) {
             return;
@@ -204,9 +204,9 @@ async function applyCrop() {
             onSuccess: (pageResponse) => {
                 const flashed = (
                     pageResponse.props as {
-                        flash?: { patientPhotoUrl?: string | null };
+                        flash?: { userProfilePhotoUrl?: string | null };
                     }
-                ).flash?.patientPhotoUrl;
+                ).flash?.userProfilePhotoUrl;
                 const newUrl = flashed ?? photoUrl.value;
                 setPhotoUrl(newUrl ?? null);
                 cropDialogOpen.value = false;
@@ -234,9 +234,9 @@ function removePhoto() {
         onSuccess: (pageResponse) => {
             const flashed = (
                 pageResponse.props as {
-                    flash?: { patientPhotoUrl?: string | null };
+                    flash?: { userProfilePhotoUrl?: string | null };
                 }
-            ).flash?.patientPhotoUrl;
+            ).flash?.userProfilePhotoUrl;
             setPhotoUrl(flashed ?? null);
         },
         onFinish: () => {
@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
                 <img
                     v-if="photoUrl"
                     :src="photoUrl"
-                    alt="Foto del paciente"
+                    alt="Foto del usuario"
                     class="h-full w-full object-cover"
                 />
                 <UserIcon v-else class="h-8 w-8" />

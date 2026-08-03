@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -23,6 +24,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $name
  * @property string $email
  * @property Carbon|null $email_verified_at
+ * @property UserStatus|null $status
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -35,7 +37,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property-read Collection<int, Permission> $permissions
  * @property-read Role|null $activeRole
  */
-#[Fillable(['name', 'email', 'password', 'password_updated', 'active_role_id'])]
+#[Fillable(['name', 'email', 'status', 'password', 'password_updated', 'active_role_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -54,6 +56,7 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'password_updated' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
+            'status' => UserStatus::class,
         ];
     }
 
@@ -92,24 +95,24 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * Patients created by this user (i.e. patient records associated with
-     * the user account through `created_by_user_id`).
+     * User profiles created by this user (i.e. profile records associated
+     * with the user account through `created_by_user_id`).
      *
-     * @return HasMany<Patients>
+     * @return HasMany<UsersProfile>
      */
-    public function createdPatients(): HasMany
+    public function createdUsersProfiles(): HasMany
     {
-        return $this->hasMany(Patients::class, 'created_by_user_id');
+        return $this->hasMany(UsersProfile::class, 'created_by_user_id');
     }
 
     /**
-     * The patient record linked to this user account through `user_id`.
+     * The user profile record linked to this user account through `user_id`.
      *
-     * @return HasMany<Patients>
+     * @return HasMany<UsersProfile>
      */
-    public function patient(): HasMany
+    public function usersProfile(): HasMany
     {
-        return $this->hasMany(Patients::class, 'user_id');
+        return $this->hasMany(UsersProfile::class, 'user_id');
     }
 
     /**
@@ -132,16 +135,6 @@ class User extends Authenticatable implements PasskeyUser
         return $this->roles()->first();
     }
 
-    /**
-     * Get the user's list of permission slugs available to the user.
-     *
-     * - Superusuario gets every permission in the system.
-     * - All other users get the union of:
-     *     1) their directly assigned permissions (`users_permissions`)
-     *     2) permissions enabled for any of the modules of any of their roles
-     *        via the new `roles_modules_permissions` pivot.
-     *
-     * @return array<int, string>
     /**
      * Get the user's list of permission slugs available right now.
      *
@@ -187,14 +180,14 @@ class User extends Authenticatable implements PasskeyUser
      * Determine whether the user has a matching record in any of the
      * domain tables that justify the given role.
      *
-     * For the `paciente` role, the user is considered to "own" a patient
-     * record if they are linked through `patients.user_id`.
+     * For the `paciente` role, the user is considered to "own" a user
+     * profile record if they are linked through `users_profiles.user_id`.
      *
      * For staff roles (`doctor`, `enfermeria`, `asistencial`) we currently
      * do not have dedicated domain tables, so we fall back to the same
-     * `createdPatients` association as a proxy: a staff user that has
-     * created patient records is allowed to keep their role. This can be
-     * tightened later by introducing proper staff tables.
+     * `createdUsersProfiles` association as a proxy: a staff user that has
+     * created user profile records is allowed to keep their role. This can
+     * be tightened later by introducing proper staff tables.
      *
      * For administrative roles (`superusuario`, `administrador`) the user
      * is always considered to have a valid match because those roles
@@ -203,8 +196,8 @@ class User extends Authenticatable implements PasskeyUser
     public function hasDomainRecordForRole(string $roleSlug): bool
     {
         return match ($roleSlug) {
-            'paciente' => $this->patient()->exists(),
-            'doctor', 'enfermeria', 'asistencial' => $this->createdPatients()->exists(),
+            'paciente' => $this->usersProfile()->exists(),
+            'doctor', 'enfermeria', 'asistencial' => $this->createdUsersProfiles()->exists(),
             'superusuario', 'administrador' => true,
             default => false,
         };

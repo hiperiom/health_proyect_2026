@@ -4,7 +4,7 @@ namespace App\Http\Requests\Users;
 
 use App\Enums\Gender;
 use App\Enums\Nacionality;
-use App\Enums\PatientStatus;
+use App\Enums\UserStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,11 +22,11 @@ class UpdateUserRequest extends FormRequest
 
         return [
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($userId)],
-            'status' => ['sometimes', 'required', 'string', Rule::enum(PatientStatus::class)],
+            'status' => ['sometimes', 'required', 'string', Rule::enum(UserStatus::class)],
             'first_name' => ['sometimes', 'required', 'string', 'max:100'],
             'last_name' => ['sometimes', 'required', 'string', 'max:100'],
             'nacionality' => ['sometimes', 'required', 'string', Rule::in(Nacionality::values())],
-            'dni' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('patients', 'dni')->ignore($this->patientId())],
+            'dni' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('users_profiles', 'dni')->ignore($this->usersProfileId())],
             'birth_date' => ['sometimes', 'required', 'date', 'after_or_equal:1900-01-01', 'before_or_equal:'.$currentYear.'-12-31'],
             'gender' => ['sometimes', 'required', 'string', Rule::in(Gender::values())],
             'phone_mobile' => ['sometimes', 'required', 'string', 'max:30'],
@@ -37,10 +37,10 @@ class UpdateUserRequest extends FormRequest
     }
 
     /**
-     * Get the patient id linked to the user being updated, used to
+     * Get the user profile id linked to the user being updated, used to
      * ignore the current record when validating the unique dni.
      */
-    private function patientId(): ?int
+    private function usersProfileId(): ?int
     {
         $user = $this->route('user');
 
@@ -48,6 +48,6 @@ class UpdateUserRequest extends FormRequest
             return null;
         }
 
-        return $user->patient()->value('id');
+        return $user->usersProfile()->value('id');
     }
 }

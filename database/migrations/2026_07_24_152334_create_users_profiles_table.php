@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('patients', function (Blueprint $table) {
+        Schema::create('users_profiles', function (Blueprint $table) {
             $table->id();
             $table->string('photo_path')->nullable();
             $table->string('first_name', 100);
@@ -20,13 +20,12 @@ return new class extends Migration
             $table->string('phone_mobile', 30);
             $table->string('phone_landline', 30)->nullable();
             $table->foreignId('created_by_user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('status', 20)->default('active');
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('patients');
+        Schema::dropIfExists('users_profiles');
     }
 };

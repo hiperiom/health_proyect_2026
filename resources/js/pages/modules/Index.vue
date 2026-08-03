@@ -188,13 +188,13 @@ return;
                                     id="name"
                                     name="name"
                                     :default-value="editingItem?.name"
-                                    placeholder="Patient"
+                                    placeholder="UsersProfile"
                                     required
                                 />
                                 <InputError :message="errors.name" />
                                 <p class="text-xs text-muted-foreground">
                                     Must start with an uppercase letter (e.g.
-                                    "Patient", "OrderItem").
+                                    "UsersProfile", "OrderItem").
                                 </p>
                             </div>
                             <div class="grid gap-2">
@@ -207,7 +207,7 @@ return;
                                     :default-value="
                                         editingItem?.display_name ?? ''
                                     "
-                                    placeholder="Patients (shown in the dashboard sidebar)"
+                                    placeholder="Users (shown in the dashboard sidebar)"
                                 />
                                 <InputError :message="errors.display_name" />
                                 <p class="text-xs text-muted-foreground">

@@ -4,9 +4,8 @@ namespace App\Models;
 
 use App\Enums\Gender;
 use App\Enums\Nacionality;
-use App\Enums\PatientStatus;
-use App\Exceptions\InvalidPatientUserException;
-use Database\Factories\PatientsFactory;
+use App\Exceptions\InvalidUserProfileUserException;
+use Database\Factories\UsersProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * @use HasFactory<PatientsFactory>
+ * @use HasFactory<UsersProfileFactory>
  */
 #[Fillable([
     'photo_path',
@@ -29,11 +28,12 @@ use Illuminate\Support\Facades\Storage;
     'phone_landline',
     'created_by_user_id',
     'user_id',
-    'status',
 ])]
-class Patients extends Model
+class UsersProfile extends Model
 {
     use HasFactory;
+
+    protected $table = 'users_profiles';
 
     protected function casts(): array
     {
@@ -41,15 +41,14 @@ class Patients extends Model
             'birth_date' => 'date',
             'nacionality' => Nacionality::class,
             'gender' => Gender::class,
-            'status' => PatientStatus::class,
         ];
     }
 
     protected static function booted(): void
     {
-        static::creating(function (self $patient): void {
-            if (empty($patient->user_id)) {
-                throw new InvalidPatientUserException('A patient must be linked to a user.');
+        static::creating(function (self $usersProfile): void {
+            if (empty($usersProfile->user_id)) {
+                throw new InvalidUserProfileUserException('A user profile must be linked to a user.');
             }
         });
     }

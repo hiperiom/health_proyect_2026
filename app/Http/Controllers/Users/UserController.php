@@ -4,17 +4,17 @@ namespace App\Http\Controllers\Users;
 
 use App\Enums\Gender;
 use App\Enums\Nacionality;
-use App\Enums\PatientStatus;
 use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\AssignRolesRequest;
 use App\Http\Requests\Users\CheckEmailRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
-use App\Models\Patients;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UsersProfile;
 use App\Notifications\UserCreatedTemporaryPassword;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +38,7 @@ class UserController extends Controller
         }
 
         $users = User::query()
-            ->with(['roles:id,slug,name,color_class,text_class,icon_svg', 'permissions:id,name,slug,module,description', 'patient'])
+            ->with(['roles:id,slug,name,color_class,text_class,icon_svg', 'permissions:id,name,slug,module,description', 'usersProfile'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $like = '%'.$search.'%';
@@ -59,12 +59,15 @@ class UserController extends Controller
                 $entitledRoles = $user->entitledRoles();
                 $primaryRole = $entitledRoles->first();
                 $allRoles = $user->roles;
-                $patient = $user->patient->first();
+                $profile = $user->usersProfile->first();
 
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'status' => $user->status?->value,
+                    'statusLabel' => $user->status?->label(),
+                    'statusColorClass' => $user->status?->colorClass(),
                     'role' => $primaryRole?->slug,
                     'roleName' => $primaryRole?->name,
                     'role_ids' => $allRoles
@@ -86,19 +89,16 @@ class UserController extends Controller
                         ->pluck('id')
                         ->values()
                         ->all(),
-                    'patientId' => $patient?->id,
-                    'photoUrl' => $patient?->photo_url,
-                    'firstName' => $patient?->first_name,
-                    'lastName' => $patient?->last_name,
-                    'nacionality' => $patient?->nacionality?->value,
-                    'dni' => $patient?->dni,
-                    'birthDate' => $patient?->birth_date?->toDateString(),
-                    'gender' => $patient?->gender?->value,
-                    'phoneMobile' => $patient?->phone_mobile,
-                    'phoneLandline' => $patient?->phone_landline,
-                    'status' => $patient?->status?->value,
-                    'statusLabel' => $patient?->status?->label(),
-                    'statusColorClass' => $patient?->status?->colorClass(),
+                    'usersProfileId' => $profile?->id,
+                    'photoUrl' => $profile?->photo_url,
+                    'firstName' => $profile?->first_name,
+                    'lastName' => $profile?->last_name,
+                    'nacionality' => $profile?->nacionality?->value,
+                    'dni' => $profile?->dni,
+                    'birthDate' => $profile?->birth_date?->toDateString(),
+                    'gender' => $profile?->gender?->value,
+                    'phoneMobile' => $profile?->phone_mobile,
+                    'phoneLandline' => $profile?->phone_landline,
                     'createdAt' => $user->created_at?->toISOString(),
                     'updatedAt' => $user->updated_at?->toISOString(),
                 ];
@@ -128,6 +128,7 @@ class UserController extends Controller
             $user = User::create([
                 'name' => trim($data['first_name'].' '.$data['last_name']),
                 'email' => $data['email'],
+                'status' => $data['status'],
                 'password' => $temporaryPassword,
                 'password_updated' => false,
             ]);
@@ -138,7 +139,7 @@ class UserController extends Controller
             );
             $user->roles()->sync([$role->id]);
 
-            Patients::create([
+            UsersProfile::create([
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'nacionality' => $data['nacionality'],
@@ -147,7 +148,6 @@ class UserController extends Controller
                 'gender' => $data['gender'],
                 'phone_mobile' => $data['phone_mobile'],
                 'phone_landline' => $data['phone_landline'] ?? null,
-                'status' => $data['status'],
                 'user_id' => $user->id,
                 'created_by_user_id' => auth()->id(),
             ]);
@@ -163,30 +163,30 @@ class UserController extends Controller
 
     public function edit(Request $request, User $user): Response
     {
-        $user->load(['roles:id,slug,name', 'patient']);
-        $patient = $user->patient->first();
+        $user->load(['roles:id,slug,name', 'usersProfile']);
+        $profile = $user->usersProfile->first();
 
         return Inertia::render('users/Index', [
             'item' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'status' => $user->status?->value,
                 'role_ids' => $user->roles->pluck('id')->values()->all(),
                 'permission_ids' => $user->permissions
                     ->pluck('id')
                     ->values()
                     ->all(),
-                'patientId' => $patient?->id,
-                'photoUrl' => $patient?->photo_url,
-                'firstName' => $patient?->first_name,
-                'lastName' => $patient?->last_name,
-                'nacionality' => $patient?->nacionality?->value,
-                'dni' => $patient?->dni,
-                'birthDate' => $patient?->birth_date?->toDateString(),
-                'gender' => $patient?->gender?->value,
-                'phoneMobile' => $patient?->phone_mobile,
-                'phoneLandline' => $patient?->phone_landline,
-                'status' => $patient?->status?->value,
+                'usersProfileId' => $profile?->id,
+                'photoUrl' => $profile?->photo_url,
+                'firstName' => $profile?->first_name,
+                'lastName' => $profile?->last_name,
+                'nacionality' => $profile?->nacionality?->value,
+                'dni' => $profile?->dni,
+                'birthDate' => $profile?->birth_date?->toDateString(),
+                'gender' => $profile?->gender?->value,
+                'phoneMobile' => $profile?->phone_mobile,
+                'phoneLandline' => $profile?->phone_landline,
             ],
             'availableRoles' => $this->availableRoles(),
             'allPermissions' => $this->allPermissions(),
@@ -211,10 +211,13 @@ class UserController extends Controller
             if ($email !== null) {
                 $userFields['email'] = $email;
             }
+            if (array_key_exists('status', $data)) {
+                $userFields['status'] = $data['status'];
+            }
             if ($firstName !== null || $lastName !== null) {
-                $patient = $user->patient->first();
+                $profile = $user->usersProfile->first();
                 $userFields['name'] = trim(
-                    ($firstName ?? $patient?->first_name ?? '').' '.($lastName ?? $patient?->last_name ?? '')
+                    ($firstName ?? $profile?->first_name ?? '').' '.($lastName ?? $profile?->last_name ?? '')
                 );
             }
 
@@ -222,7 +225,7 @@ class UserController extends Controller
                 $user->update($userFields);
             }
 
-            $patientFields = collect($data)->only([
+            $profileFields = collect($data)->only([
                 'first_name',
                 'last_name',
                 'nacionality',
@@ -231,13 +234,12 @@ class UserController extends Controller
                 'gender',
                 'phone_mobile',
                 'phone_landline',
-                'status',
             ])->filter(fn ($value) => $value !== null || array_key_exists('phone_landline', $data))->all();
 
-            $patient = $user->patient->first();
+            $profile = $user->usersProfile->first();
 
-            if ($patient !== null && $patientFields !== []) {
-                $patient->update($patientFields);
+            if ($profile !== null && $profileFields !== []) {
+                $profile->update($profileFields);
             }
 
             if ($roleIds !== null) {
@@ -269,43 +271,43 @@ class UserController extends Controller
             'photo' => ['required', 'file', 'image', 'mimes:png,jpg,jpeg', 'max:5120'],
         ]);
 
-        $patient = $user->patient->first();
+        $profile = $user->usersProfile->first();
 
-        if ($patient === null) {
+        if ($profile === null) {
             return back();
         }
 
-        $this->deletePhotoFile($patient);
+        $this->deletePhotoFile($profile);
 
         $extension = $request->file('photo')->getClientOriginalExtension();
-        $filename = sprintf('%s-%s.%s', $patient->id, (string) Str::ulid(), strtolower($extension));
+        $filename = sprintf('%s-%s.%s', $profile->id, (string) Str::ulid(), strtolower($extension));
         $path = $request->file('photo')->storeAs(
-            "patients/photos/{$patient->id}",
+            "users-profiles/photos/{$profile->id}",
             $filename,
             'public',
         );
 
-        $patient->update(['photo_path' => $path]);
+        $profile->update(['photo_path' => $path]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Patient photo updated.')]);
-        Inertia::flash('patientPhotoUrl', $patient->fresh()->photo_url);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile photo updated.')]);
+        Inertia::flash('userProfilePhotoUrl', $profile->fresh()->photo_url);
 
         return back();
     }
 
     public function photoDestroy(User $user): RedirectResponse
     {
-        $patient = $user->patient->first();
+        $profile = $user->usersProfile->first();
 
-        if ($patient === null) {
+        if ($profile === null) {
             return back();
         }
 
-        $this->deletePhotoFile($patient);
-        $patient->update(['photo_path' => null]);
+        $this->deletePhotoFile($profile);
+        $profile->update(['photo_path' => null]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Patient photo removed.')]);
-        Inertia::flash('patientPhotoUrl', null);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile photo removed.')]);
+        Inertia::flash('userProfilePhotoUrl', null);
 
         return back();
     }
@@ -363,10 +365,10 @@ class UserController extends Controller
         return to_route('users.index');
     }
 
-    protected function deletePhotoFile(Patients $patient): void
+    protected function deletePhotoFile(UsersProfile $profile): void
     {
-        if ($patient->photo_path && Storage::disk('public')->exists($patient->photo_path)) {
-            Storage::disk('public')->delete($patient->photo_path);
+        if ($profile->photo_path && Storage::disk('public')->exists($profile->photo_path)) {
+            Storage::disk('public')->delete($profile->photo_path);
         }
     }
 
@@ -419,8 +421,8 @@ class UserController extends Controller
     /** @return array<int, array{value: string, label: string, colorClass: string}> */
     private function availableStatuses(): array
     {
-        return collect(PatientStatus::cases())
-            ->map(fn (PatientStatus $status): array => [
+        return collect(UserStatus::cases())
+            ->map(fn (UserStatus $status): array => [
                 'value' => $status->value,
                 'label' => $status->label(),
                 'colorClass' => $status->colorClass(),

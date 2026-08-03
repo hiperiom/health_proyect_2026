@@ -19,7 +19,7 @@ import 'driver.js/dist/driver.css';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
-import PatientPhotoUploader from '@/components/PatientPhotoUploader.vue';
+import UsersProfilePhotoUploader from '@/components/UsersProfilePhotoUploader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -229,7 +229,12 @@ watch(emailValue, (value) => {
 function openEditSheet(item: UserModel) {
     editingItem.value = item;
     selectedRoleIds.value = item.role_ids ?? [];
-    profileOpen.value = true;
+    open.value = true;
+}
+
+function openCreateSheet() {
+    editingItem.value = null;
+    selectedRoleIds.value = [];
     open.value = true;
 }
 
@@ -543,9 +548,9 @@ const startTour = () => {
                 >
                     <HelpCircle class="h-4 w-4" />
                 </Button>
-                <Sheet v-model:open="open">
+                <Sheet v-model:open="open" @update:open="(value) => { open.value = value; if (!value) { editingItem.value = null; } }">
                     <SheetTrigger as-child>
-                        <Button id="tour-new-btn">
+                        <Button id="tour-new-btn" @click="openCreateSheet">
                             <Plus class="h-4 w-4" />
                             Nuevo Usuario
                         </Button>
@@ -576,7 +581,11 @@ const startTour = () => {
                             "
                             class="space-y-6 px-4"
                             v-slot="{ errors, processing }"
-                            @success="closeSheet"
+                            @success="
+                                open = false;
+                                editingItem = null;
+                            "
+                            @error="(e) => { console.error('Form error:', e); }"
                         >
                             <!-- Sección: Datos del usuario -->
                             <div class="space-y-4">
@@ -686,9 +695,9 @@ const startTour = () => {
                                     class="space-y-4 border-t px-4 py-4"
                                 >
                                     <div>
-                                        <PatientPhotoUploader
-                                            v-if="editingItem?.patientId"
-                                            :patient-id="editingItem.patientId"
+                                        <UsersProfilePhotoUploader
+                                            v-if="editingItem?.usersProfileId"
+                                            :users-profile-id="editingItem.usersProfileId"
                                             :initial-photo-url="
                                                 editingItem.photoUrl ?? null
                                             "

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('patients', function (Blueprint $table) {
+        Schema::table('users_profiles', function (Blueprint $table) {
             $table->foreignId('user_id')
                 ->nullable()
                 ->unique()
@@ -23,7 +23,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('patients', function (Blueprint $table) {
+        Schema::table('users_profiles', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
             $table->dropColumn('user_id');
         });

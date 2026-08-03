@@ -9,14 +9,14 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * El único email que debe existir para un paciente es el email
+     * El único email que debe existir para un perfil de usuario es el email
      * de su cuenta de usuario (`users.email`). Por lo tanto, se
-     * elimina la columna `email` de la tabla `patients`.
+     * elimina la columna `email` de la tabla `users_profiles`.
      */
     public function up(): void
     {
-        if (Schema::hasColumn('patients', 'email')) {
-            Schema::table('patients', function (Blueprint $table) {
+        if (Schema::hasColumn('users_profiles', 'email')) {
+            Schema::table('users_profiles', function (Blueprint $table) {
                 $table->dropColumn('email');
             });
         }
@@ -27,8 +27,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (! Schema::hasColumn('patients', 'email')) {
-            Schema::table('patients', function (Blueprint $table) {
+        if (! Schema::hasColumn('users_profiles', 'email')) {
+            Schema::table('users_profiles', function (Blueprint $table) {
                 $table->string('email', 150);
             });
         }

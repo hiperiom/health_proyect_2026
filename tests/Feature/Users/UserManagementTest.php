@@ -2,11 +2,11 @@
 
 use App\Enums\Gender;
 use App\Enums\Nacionality;
-use App\Enums\PatientStatus;
+use App\Enums\UserStatus;
 use App\Enums\UserRole;
-use App\Models\Patients;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UsersProfile;
 use App\Notifications\UserCreatedTemporaryPassword;
 use Illuminate\Support\Facades\Notification;
 
@@ -23,7 +23,7 @@ function validUserPayload(array $overrides = []): array
 {
     return array_merge([
         'email' => 'nuevo.usuario@example.com',
-        'status' => PatientStatus::Active->value,
+        'status' => UserStatus::Active->value,
         'first_name' => 'Juan',
         'last_name' => 'Pérez',
         'nacionality' => Nacionality::Venezuelan->value,
@@ -35,7 +35,7 @@ function validUserPayload(array $overrides = []): array
     ], $overrides);
 }
 
-test('store creates a user with the patient profile and default paciente role', function () {
+test('store creates a user with the user profile and default paciente role', function () {
     $admin = User::factory()->create();
 
     $this->actingAs($admin)
@@ -48,14 +48,14 @@ test('store creates a user with the patient profile and default paciente role', 
         'id' => $created->id,
         'name' => 'Juan Pérez',
         'email' => 'nuevo.usuario@example.com',
+        'status' => UserStatus::Active->value,
     ]);
 
-    $this->assertDatabaseHas('patients', [
+    $this->assertDatabaseHas('users_profiles', [
         'user_id' => $created->id,
         'first_name' => 'Juan',
         'last_name' => 'Pérez',
         'dni' => '12345678',
-        'status' => PatientStatus::Active->value,
     ]);
 
     $this->assertTrue(
@@ -95,7 +95,7 @@ test('store fails when the dni is already taken', function () {
     $admin = User::factory()->create();
 
     $existing = User::factory()->create();
-    Patients::factory()->create(['dni' => '99887766', 'user_id' => $existing->id, 'created_by_user_id' => $admin->id]);
+    UsersProfile::factory()->create(['dni' => '99887766', 'user_id' => $existing->id, 'created_by_user_id' => $admin->id]);
 
     $this->actingAs($admin)
         ->post(route('users.store'), validUserPayload(['dni' => '99887766']))
@@ -119,10 +119,12 @@ test('store fails when birth_date is after the current year', function () {
         ->assertSessionHasErrors('birth_date');
 });
 
-test('update edits the user account and the patient profile', function () {
+test('update edits the user account and the user profile', function () {
     $admin = User::factory()->create();
-    $user = User::factory()->create();
-    $patient = Patients::factory()->create([
+    $user = User::factory()->create([
+        'status' => UserStatus::Active->value,
+    ]);
+    $profile = UsersProfile::factory()->create([
         'user_id' => $user->id,
         'created_by_user_id' => $admin->id,
     ]);
@@ -130,7 +132,7 @@ test('update edits the user account and the patient profile', function () {
     $this->actingAs($admin)
         ->patch(route('users.update', $user), [
             'email' => 'actualizado@example.com',
-            'status' => PatientStatus::Inactive->value,
+            'status' => UserStatus::Inactive->value,
             'first_name' => 'Carlos',
             'last_name' => 'Gómez',
             'nacionality' => Nacionality::Foreigner->value,
@@ -146,14 +148,14 @@ test('update edits the user account and the patient profile', function () {
         'id' => $user->id,
         'name' => 'Carlos Gómez',
         'email' => 'actualizado@example.com',
+        'status' => UserStatus::Inactive->value,
     ]);
 
-    $this->assertDatabaseHas('patients', [
-        'id' => $patient->id,
+    $this->assertDatabaseHas('users_profiles', [
+        'id' => $profile->id,
         'first_name' => 'Carlos',
         'last_name' => 'Gómez',
         'dni' => '87654321',
-        'status' => PatientStatus::Inactive->value,
         'phone_landline' => '02121234567',
     ]);
 });
@@ -212,7 +214,7 @@ test('users can be filtered by role slug in the index', function () {
         );
 });
 
-test('index returns patient fields and select options', function () {
+test('index returns user fields and select options', function () {
     $admin = User::factory()->create();
 
     $this->actingAs($admin)

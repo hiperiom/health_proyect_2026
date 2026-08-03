@@ -31,7 +31,7 @@ class StoreModuleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.regex' => 'The name must be PascalCase (e.g. "Patient", "OrderItem").',
+            'name.regex' => 'The name must be PascalCase (e.g. "UsersProfile", "OrderItem").',
         ];
     }
 }

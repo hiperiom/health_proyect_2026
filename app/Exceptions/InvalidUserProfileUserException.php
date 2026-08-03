@@ -4,7 +4,7 @@ namespace App\Exceptions;
 
 use InvalidArgumentException;
 
-class InvalidPatientUserException extends InvalidArgumentException
+class InvalidUserProfileUserException extends InvalidArgumentException
 {
     //
 }

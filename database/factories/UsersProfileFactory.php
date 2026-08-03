@@ -4,17 +4,16 @@ namespace Database\Factories;
 
 use App\Enums\Gender;
 use App\Enums\Nacionality;
-use App\Enums\PatientStatus;
-use App\Models\Patients;
 use App\Models\User;
+use App\Models\UsersProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Patients>
+ * @extends Factory<UsersProfile>
  */
-class PatientsFactory extends Factory
+class UsersProfileFactory extends Factory
 {
-    protected $model = Patients::class;
+    protected $model = UsersProfile::class;
 
     public function definition(): array
     {
@@ -34,17 +33,6 @@ class PatientsFactory extends Factory
             'phone_landline' => $this->faker->boolean(40) ? '0'.(string) $this->faker->numberBetween(212000000, 212999999) : null,
             'created_by_user_id' => User::factory(),
             'user_id' => User::factory(),
-            'status' => PatientStatus::Active,
         ];
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(fn (): array => ['status' => PatientStatus::Inactive->value]);
-    }
-
-    public function archived(): static
-    {
-        return $this->state(fn (): array => ['status' => PatientStatus::Archived->value]);
     }
 }

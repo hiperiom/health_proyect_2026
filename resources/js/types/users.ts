@@ -51,7 +51,7 @@ export type UserModel = {
     permission_ids?: number[];
     permissions?: PermissionOption[];
     passwordUpdated?: boolean;
-    patientId?: number | null;
+    usersProfileId?: number | null;
     photoUrl?: string | null;
     firstName?: string | null;
     lastName?: string | null;
