@@ -1,90 +1,34 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3';
-// 1. Importar el icono de ayuda (agréguelo a su import existente de lucide)
-import { CircleCheck, Key, MoreVertical, Pencil, Plus, Search, Shield, Trash, HelpCircle } from '@lucide/vue';
-
-// 2. Importar driver.js y sus estilos
+import {
+    AlertCircle,
+    CheckCircle2,
+    ChevronDown,
+    CircleCheck,
+    HelpCircle,
+    Key,
+    MoreVertical,
+    Pencil,
+    Plus,
+    Search,
+    Shield,
+    Trash,
+} from '@lucide/vue';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-
-// ... (su código existente de refs, watchers, etc.) ...
-
-// 3. Definir la función que inicia el Tour
-const startTour = () => {
-    const driverObj = driver({
-        showProgress: true,
-        animate: true,
-        allowClose: true,
-        overlayOpacity: 0.5,
-        nextBtnText: 'Siguiente →',
-        prevBtnText: '← Anterior',
-        doneBtnText: 'Finalizar',
-        steps: [
-            {
-                element: '#tour-search',
-                popover: {
-                    title: '🔍 Buscar Usuarios',
-                    description: 'Escribe el nombre o correo para filtrar la lista en tiempo real. El sistema aplica un debounce de 300ms para optimizar la búsqueda.',
-                    side: 'left',
-                    align: 'start',
-                },
-            },
-            {
-                element: '#tour-filter',
-                popover: {
-                    title: '🛡️ Filtrar por Rol',
-                    description: 'Selecciona un rol específico (Admin, User, etc.) para ver únicamente los usuarios que poseen ese perfil.',
-                    side: 'left',
-                    align: 'start',
-                },
-            },
-            {
-                element: '#tour-new-btn',
-                popover: {
-                    title: '➕ Crear Nuevo Usuario',
-                    description: 'Haz clic aquí para abrir el panel lateral (Sheet) y registrar un nuevo usuario en el sistema.',
-                    side: 'left',
-                    align: 'start',
-                },
-            },
-            {
-                element: '#tour-table',
-                popover: {
-                    title: '📋 Tabla de Registros',
-                    description: 'Aquí se listan todos los usuarios. Puedes ver su nombre, correo y el rol asignado con su respectiva insignia de color.',
-                    side: 'top',
-                    align: 'start',
-                },
-            },
-            {
-                element: '#tour-actions',
-                popover: {
-                    title: '⚙️ Acciones por Usuario',
-                    description: 'Usa este menú (icono de 3 puntos) para Editar, Asignar Rol, Resetear Contraseña o Eliminar un usuario específico.',
-                    side: 'left',
-                    align: 'start',
-                },
-            },
-            {
-                element: '#tour-pagination',
-                popover: {
-                    title: '📄 Paginación y Controles',
-                    description: 'Navega entre las páginas y ajusta la cantidad de registros que deseas ver por página (10, 50, 100).',
-                    side: 'top',
-                    align: 'end',
-                },
-            },
-        ],
-    });
-
-    driverObj.drive();
-};
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import PatientPhotoUploader from '@/components/PatientPhotoUploader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     Dialog,
     DialogClose,
@@ -120,14 +64,21 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import {
+    assignRoles as assignRolesRoute,
+    destroy,
     index,
+    resetPassword as resetPasswordRoute,
     store,
     update,
-    destroy,
-    resetPassword as resetPasswordRoute,
-    assignRoles as assignRolesRoute,
 } from '@/routes/users';
-import type { RoleOption, UserModel, UserRole } from '@/types/users';
+import type {
+    RoleOption,
+    UserGenderOption,
+    UserModel,
+    UserNacionalityOption,
+    UserRole,
+    UserStatusOption,
+} from '@/types/users';
 
 const page = usePage();
 const temporaryPassword = ref<string | null>(null);
@@ -153,6 +104,9 @@ type Props = {
     };
     item?: UserModel;
     availableRoles?: RoleOption[];
+    availableStatuses?: UserStatusOption[];
+    availableNacionalities?: UserNacionalityOption[];
+    availableGenders?: UserGenderOption[];
     filters?: {
         search?: string;
         role?: string;
@@ -162,6 +116,9 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     availableRoles: () => [],
+    availableStatuses: () => [],
+    availableNacionalities: () => [],
+    availableGenders: () => [],
 });
 
 const availableRoles = computed<RoleOption[]>(() => props.availableRoles);
@@ -187,6 +144,18 @@ const perPage = ref<string>(
         ? String(props.filters.per_page)
         : '10',
 );
+
+// Collapsible "Perfil del usuario": abierto por defecto.
+const profileOpen = ref(true);
+
+// Validación de correo en tiempo real (disponibilidad).
+const emailValue = ref<string>(props.item?.email ?? '');
+const emailChecking = ref(false);
+const emailExists = ref(false);
+const emailMessage = ref<string | null>(null);
+
+let emailCheckAbort: AbortController | null = null;
+let emailCheckSeq = 0;
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
@@ -231,9 +200,36 @@ watch(
     { immediate: true },
 );
 
+watch(
+    () => editingItem.value?.id ?? null,
+    (id) => {
+        emailValue.value = id ? (editingItem.value?.email ?? '') : '';
+        emailCheckSeq += 1;
+
+        if (emailCheckAbort) {
+            emailCheckAbort.abort();
+        }
+
+        emailChecking.value = false;
+        resetEmailState();
+    },
+);
+
+watch(emailValue, (value) => {
+    if (emailMessage.value !== null || emailExists.value) {
+        emailMessage.value = null;
+        emailExists.value = false;
+    }
+
+    if (value.trim().length > 0) {
+        validateEmail();
+    }
+});
+
 function openEditSheet(item: UserModel) {
     editingItem.value = item;
     selectedRoleIds.value = item.role_ids ?? [];
+    profileOpen.value = true;
     open.value = true;
 }
 
@@ -251,6 +247,12 @@ function openAssignRole(item: UserModel) {
     roleItem.value = item;
     selectedRoleIds.value = item.role_ids ?? [];
     assignRoleOpen.value = true;
+}
+
+function onPhotoUpdated(url: string | null) {
+    if (editingItem.value) {
+        editingItem.value = { ...editingItem.value, photoUrl: url };
+    }
 }
 
 function deleteItem() {
@@ -332,10 +334,168 @@ function userRoleClasses(role: UserRole): string {
 function userRoleIcon(role: UserRole): string | null {
     return role.icon_svg ?? null;
 }
+
+function resetEmailState(): void {
+    emailExists.value = false;
+    emailMessage.value = null;
+}
+
+function closeSheet(): void {
+    open.value = false;
+    editingItem.value = null;
+    resetEmailState();
+    emailValue.value = '';
+}
+
+async function validateEmail(): Promise<void> {
+    const value = emailValue.value.trim();
+
+    if (value.length === 0) {
+        resetEmailState();
+
+        return;
+    }
+
+    if (emailCheckAbort) {
+        emailCheckAbort.abort();
+    }
+
+    const controller = new AbortController();
+    emailCheckAbort = controller;
+    const seq = ++emailCheckSeq;
+
+    emailChecking.value = true;
+
+    try {
+        const url = `/users/check-email?email=${encodeURIComponent(value)}${
+            editingItem.value?.id ? `&ignore_id=${editingItem.value.id}` : ''
+        }`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            signal: controller.signal,
+        });
+
+        if (seq !== emailCheckSeq) {
+            return;
+        }
+
+        if (!response.ok) {
+            resetEmailState();
+
+            return;
+        }
+
+        const payload = (await response.json()) as { exists: boolean };
+
+        if (payload.exists) {
+            emailExists.value = true;
+            emailMessage.value = 'Este correo electrónico ya está registrado.';
+        } else {
+            resetEmailState();
+            emailMessage.value = 'Correo disponible.';
+        }
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+        }
+
+        resetEmailState();
+    } finally {
+        if (seq === emailCheckSeq) {
+            emailChecking.value = false;
+        }
+    }
+}
+
+const currentYear = new Date().getFullYear();
+const birthDateMin = '1900-01-01';
+const birthDateMax = `${currentYear}-12-31`;
+
+const startTour = () => {
+    const driverObj = driver({
+        showProgress: true,
+        animate: true,
+        allowClose: true,
+        overlayOpacity: 0.5,
+        nextBtnText: 'Siguiente →',
+        prevBtnText: '← Anterior',
+        doneBtnText: 'Finalizar',
+        steps: [
+            {
+                element: '#tour-search',
+                popover: {
+                    title: '🔍 Buscar Usuarios',
+                    description:
+                        'Escribe el nombre o correo para filtrar la lista en tiempo real.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-filter',
+                popover: {
+                    title: '🛡️ Filtrar por Rol',
+                    description:
+                        'Selecciona un rol específico para ver únicamente los usuarios que poseen ese perfil.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-new-btn',
+                popover: {
+                    title: '➕ Crear Nuevo Usuario',
+                    description:
+                        'Haz clic aquí para abrir el panel lateral y registrar un nuevo usuario.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-table',
+                popover: {
+                    title: '📋 Tabla de Registros',
+                    description:
+                        'Aquí se listan todos los usuarios con su foto, nombre, correo y rol.',
+                    side: 'top',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-actions',
+                popover: {
+                    title: '⚙️ Acciones por Usuario',
+                    description:
+                        'Usa este menú para Editar, Asignar Rol, Resetear Contraseña o Eliminar un usuario.',
+                    side: 'left',
+                    align: 'start',
+                },
+            },
+            {
+                element: '#tour-pagination',
+                popover: {
+                    title: '📄 Paginación y Controles',
+                    description:
+                        'Navega entre las páginas y ajusta la cantidad de registros por página.',
+                    side: 'top',
+                    align: 'end',
+                },
+            },
+        ],
+    });
+
+    driverObj.drive();
+};
 </script>
 
 <template>
-    <Head title="Users" />
+    <Head title="Usuarios" />
 
     <div class="flex h-full flex-col space-y-6">
         <div
@@ -343,8 +503,8 @@ function userRoleIcon(role: UserRole): string | null {
         >
             <Heading
                 variant="small"
-                title="Users"
-                description="Manage users and their roles"
+                title="Usuarios"
+                description="Gestión de usuarios y sus perfiles del sistema"
             />
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="relative w-full sm:w-72" id="tour-search">
@@ -354,48 +514,57 @@ function userRoleIcon(role: UserRole): string | null {
                     <Input
                         v-model="search"
                         type="search"
-                        placeholder="Search by name or email..."
+                        placeholder="Buscar por nombre o correo..."
                         class="pl-8"
                     />
                 </div>
                 <div id="tour-filter">
-                <Select v-model="roleFilter">
-                    <SelectTrigger class="w-full sm:w-40">
-                        <SelectValue placeholder="All roles" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All roles</SelectItem>
-                        <SelectItem
-                            v-for="role in availableRoles"
-                            :key="role.value"
-                            :value="role.value"
-                        >
-                            {{ role.label }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
+                    <Select v-model="roleFilter">
+                        <SelectTrigger class="w-full sm:w-40">
+                            <SelectValue placeholder="Todos los roles" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los roles</SelectItem>
+                            <SelectItem
+                                v-for="role in availableRoles"
+                                :key="role.value"
+                                :value="role.value"
+                            >
+                                {{ role.label }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-                <Button variant="outline" size="icon"  @click="startTour" title="Guía del módulo">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    @click="startTour"
+                    title="Guía del módulo"
+                >
                     <HelpCircle class="h-4 w-4" />
                 </Button>
                 <Sheet v-model:open="open">
                     <SheetTrigger as-child>
                         <Button id="tour-new-btn">
                             <Plus class="h-4 w-4" />
-                            New User
+                            Nuevo Usuario
                         </Button>
                     </SheetTrigger>
-                    <SheetContent>
+                    <SheetContent class="overflow-y-auto">
                         <SheetHeader>
                             <SheetTitle
                                 >{{
-                                    editingItem ? 'Edit' : 'Create'
+                                    editingItem ? 'Editar' : 'Crear'
                                 }}
-                                User</SheetTitle
+                                Usuario</SheetTitle
                             >
                             <SheetDescription>
-                                {{ editingItem ? 'Update' : 'Create a new' }}
-                                user account.
+                                {{
+                                    editingItem
+                                        ? 'Actualice los datos del'
+                                        : 'Registre un nuevo'
+                                }}
+                                usuario en el sistema.
                             </SheetDescription>
                         </SheetHeader>
                         <Form
@@ -407,83 +576,352 @@ function userRoleIcon(role: UserRole): string | null {
                             "
                             class="space-y-6 px-4"
                             v-slot="{ errors, processing }"
-                            @success="
-                                open = false;
-                                editingItem = null;
-                            "
+                            @success="closeSheet"
                         >
-                            <div class="grid gap-2">
-                                <Label for="name">Name</Label>
-                                <Input
-                                    id="name"
-                                    name="name"
-                                    :default-value="editingItem?.name"
-                                    placeholder="Full name"
-                                    required
-                                />
-                                <InputError :message="errors.name" />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    :default-value="editingItem?.email"
-                                    placeholder="email@example.com"
-                                    required
-                                />
-                                <InputError :message="errors.email" />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label>Roles</Label>
-                                <div class="space-y-1 max-h-[200px] overflow-y-auto rounded-md border p-2">
-                                    <label
-                                        v-for="role in availableRoles"
-                                        :key="role.value"
-                                        class="flex items-center gap-2 rounded-md p-2 hover:bg-muted/50"
-                                    >
-                                        <Checkbox
-                                            :model-value="
-                                                selectedRoleIds.includes(
-                                                    role.value,
-                                                )
-                                            "
-                                            @update:model-value="
-                                                (checked) => {
-                                                    if (checked === true) {
-                                                        if (
-                                                            !selectedRoleIds.includes(
-                                                                role.value,
-                                                            )
-                                                        ) {
-                                                            selectedRoleIds.push(
-                                                                role.value,
-                                                            );
-                                                        }
-                                                    } else {
-                                                        selectedRoleIds =
-                                                            selectedRoleIds.filter(
-                                                                (id) =>
-                                                                    id !== role.value,
-                                                            );
-                                                    }
-                                                }
-                                            "
+                            <!-- Sección: Datos del usuario -->
+                            <div class="space-y-4">
+                                <h3
+                                    class="border-b pb-2 text-sm font-semibold text-foreground"
+                                >
+                                    Datos del usuario
+                                </h3>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="grid gap-2">
+                                        <Label for="email"
+                                            >Correo Electrónico
+                                            <span class="text-destructive"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <Input
+                                            id="email"
+                                            name="email"
+                                            type="email"
+                                            v-model="emailValue"
+                                            placeholder="usuario@ejemplo.com"
+                                            required
                                         />
-                                        <span class="text-sm font-medium">{{
-                                            role.label
-                                        }}</span>
-                                    </label>
+                                        <p
+                                            v-if="emailChecking"
+                                            class="text-xs text-muted-foreground"
+                                        >
+                                            Verificando correo...
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                emailExists && emailMessage
+                                            "
+                                            class="flex items-start gap-1 text-xs text-destructive"
+                                        >
+                                            <AlertCircle
+                                                class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                            />
+                                            <span>{{ emailMessage }}</span>
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                emailMessage && !emailExists
+                                            "
+                                            class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
+                                        >
+                                            <CheckCircle2
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            <span>{{ emailMessage }}</span>
+                                        </p>
+                                        <InputError :message="errors.email" />
+                                    </div>
+                                    <div class="grid gap-2">
+                                        <Label for="status"
+                                            >Estatus
+                                            <span class="text-destructive"
+                                                >*</span
+                                            ></Label
+                                        >
+                                        <Select
+                                            name="status"
+                                            :default-value="
+                                                editingItem?.status ?? 'active'
+                                            "
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue
+                                                    placeholder="Seleccione"
+                                                />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem
+                                                    v-for="option in availableStatuses"
+                                                    :key="option.value"
+                                                    :value="option.value"
+                                                >
+                                                    {{ option.label }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <InputError
+                                            :message="errors.status"
+                                        />
+                                    </div>
                                 </div>
-                                <InputError :message="errors.role_ids" />
                             </div>
+
+                            <!-- Collapsible: Perfil del usuario -->
+                            <Collapsible
+                                v-model:open="profileOpen"
+                                class="rounded-md border"
+                            >
+                                <CollapsibleTrigger
+                                    class="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-muted/50"
+                                >
+                                    <span>Perfil del usuario</span>
+                                    <ChevronDown
+                                        class="h-4 w-4 transition-transform duration-200"
+                                        :class="
+                                            profileOpen ? 'rotate-180' : ''
+                                        "
+                                    />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent
+                                    class="space-y-4 border-t px-4 py-4"
+                                >
+                                    <div>
+                                        <PatientPhotoUploader
+                                            v-if="editingItem?.patientId"
+                                            :patient-id="editingItem.patientId"
+                                            :initial-photo-url="
+                                                editingItem.photoUrl ?? null
+                                            "
+                                            :upload-url="`/users/${editingItem.id}/photo`"
+                                            :destroy-url="`/users/${editingItem.id}/photo`"
+                                            @updated="onPhotoUpdated"
+                                        />
+                                        <div v-else>
+                                            <Label>Fotografía</Label>
+                                            <p
+                                                class="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
+                                            >
+                                                La fotografía se podrá cargar
+                                                después de crear el usuario.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="grid gap-2">
+                                            <Label for="first_name"
+                                                >Nombres
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Input
+                                                id="first_name"
+                                                name="first_name"
+                                                :default-value="
+                                                    editingItem?.firstName ?? ''
+                                                "
+                                                placeholder="Ej. Juan"
+                                                required
+                                            />
+                                            <InputError
+                                                :message="errors.first_name"
+                                            />
+                                        </div>
+                                        <div class="grid gap-2">
+                                            <Label for="last_name"
+                                                >Apellidos
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Input
+                                                id="last_name"
+                                                name="last_name"
+                                                :default-value="
+                                                    editingItem?.lastName ?? ''
+                                                "
+                                                placeholder="Ej. Pérez García"
+                                                required
+                                            />
+                                            <InputError
+                                                :message="errors.last_name"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="grid gap-2">
+                                            <Label for="nacionality"
+                                                >Nacionalidad
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Select
+                                                name="nacionality"
+                                                :default-value="
+                                                    editingItem?.nacionality ??
+                                                    'V'
+                                                "
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue
+                                                        placeholder="Seleccione"
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="option in availableNacionalities"
+                                                        :key="option.value"
+                                                        :value="option.value"
+                                                    >
+                                                        {{ option.label }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                :message="errors.nacionality"
+                                            />
+                                        </div>
+                                        <div class="grid gap-2">
+                                            <Label for="dni"
+                                                >Número de Documento
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Input
+                                                id="dni"
+                                                name="dni"
+                                                :default-value="
+                                                    editingItem?.dni ?? ''
+                                                "
+                                                placeholder="12345678"
+                                                required
+                                            />
+                                            <InputError
+                                                :message="errors.dni"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="grid gap-2">
+                                            <Label for="birth_date"
+                                                >Fecha de Nacimiento
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Input
+                                                id="birth_date"
+                                                name="birth_date"
+                                                type="date"
+                                                :default-value="
+                                                    editingItem?.birthDate ?? ''
+                                                "
+                                                :min="birthDateMin"
+                                                :max="birthDateMax"
+                                                required
+                                            />
+                                            <InputError
+                                                :message="errors.birth_date"
+                                            />
+                                        </div>
+                                        <div class="grid gap-2">
+                                            <Label for="gender"
+                                                >Género
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Select
+                                                name="gender"
+                                                :default-value="
+                                                    editingItem?.gender ?? 'M'
+                                                "
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue
+                                                        placeholder="Seleccione"
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="option in availableGenders"
+                                                        :key="option.value"
+                                                        :value="option.value"
+                                                    >
+                                                        {{ option.label }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                :message="errors.gender"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="grid gap-2">
+                                            <Label for="phone_mobile"
+                                                >Teléfono Móvil
+                                                <span
+                                                    class="text-destructive"
+                                                    >*</span
+                                                ></Label
+                                            >
+                                            <Input
+                                                id="phone_mobile"
+                                                name="phone_mobile"
+                                                :default-value="
+                                                    editingItem?.phoneMobile ??
+                                                    ''
+                                                "
+                                                placeholder="04141234567"
+                                                required
+                                            />
+                                            <InputError
+                                                :message="errors.phone_mobile"
+                                            />
+                                        </div>
+                                        <div class="grid gap-2">
+                                            <Label for="phone_landline"
+                                                >Teléfono Local</Label
+                                            >
+                                            <Input
+                                                id="phone_landline"
+                                                name="phone_landline"
+                                                :default-value="
+                                                    editingItem?.phoneLandline ??
+                                                    ''
+                                                "
+                                                placeholder="02121234567"
+                                            />
+                                            <InputError
+                                                :message="
+                                                    errors.phone_landline
+                                                "
+                                            />
+                                        </div>
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+
                             <SheetFooter>
                                 <SheetClose as-child>
-                                    <Button variant="secondary">Cancel</Button>
+                                    <Button variant="secondary"
+                                        >Cancelar</Button
+                                    >
                                 </SheetClose>
-                                <Button type="submit" :disabled="processing">
-                                    {{ editingItem ? 'Update' : 'Create' }}
+                                <Button
+                                    type="submit"
+                                    :disabled="processing || emailExists"
+                                >
+                                    {{ editingItem ? 'Actualizar' : 'Crear' }}
                                 </Button>
                             </SheetFooter>
                         </Form>
@@ -498,19 +936,19 @@ function userRoleIcon(role: UserRole): string | null {
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete User</DialogTitle>
+                    <DialogTitle>Eliminar Usuario</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete "{{
+                        ¿Está seguro de eliminar "{{
                             itemToDelete?.name
-                        }}"? This action cannot be undone.
+                        }}"? Esta acción no se puede deshacer.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
+                        <Button variant="secondary">Cancelar</Button>
                     </DialogClose>
                     <Button variant="destructive" @click="deleteItem">
-                        Delete
+                        Eliminar
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -522,17 +960,22 @@ function userRoleIcon(role: UserRole): string | null {
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Reset Password</DialogTitle>
+                    <DialogTitle>Restablecer Contraseña</DialogTitle>
                     <DialogDescription>
-                        Send a temporary password to "{{ itemToReset?.name }}"
-                        and require them to set a new password on first login.
+                        Enviar una contraseña temporal a "{{
+                            itemToReset?.name
+                        }}"
+                        y solicitar que cambie la contraseña en el primer
+                        inicio de sesión.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
+                        <Button variant="secondary">Cancelar</Button>
                     </DialogClose>
-                    <Button @click="resetPassword"> Reset Password </Button>
+                    <Button @click="resetPassword">
+                        Restablecer Contraseña
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -545,7 +988,7 @@ function userRoleIcon(role: UserRole): string | null {
                 <DialogHeader>
                     <DialogTitle>Asignar roles</DialogTitle>
                     <DialogDescription>
-                        Selecciona los roles para "{{ roleItem?.name }}".
+                        Seleccione los roles para "{{ roleItem?.name }}".
                     </DialogDescription>
                 </DialogHeader>
                 <div class="grid gap-2 py-4">
@@ -555,16 +998,16 @@ function userRoleIcon(role: UserRole): string | null {
                             {{ selectedRoleIds.length }} seleccionados
                         </span>
                     </div>
-                    <div class="space-y-1 max-h-[200px] overflow-y-auto rounded-md border p-2">
+                    <div
+                        class="max-h-[200px] space-y-1 overflow-y-auto rounded-md border p-2"
+                    >
                         <label
                             v-for="role in availableRoles"
                             :key="role.id"
                             class="flex items-center gap-2 rounded-md p-2 hover:bg-muted/50"
                         >
                             <Checkbox
-                                :model-value="
-                                    selectedRoleIds.includes(role.id)
-                                "
+                                :model-value="selectedRoleIds.includes(role.id)"
                                 @update:model-value="
                                     (checked) => {
                                         if (checked === true) {
@@ -573,18 +1016,16 @@ function userRoleIcon(role: UserRole): string | null {
                                                     role.id,
                                                 )
                                             ) {
-                                                    selectedRoleIds.push(
-                                                        role.id,
-                                                    );
-                                                }
-                                            } else {
-                                                selectedRoleIds =
-                                                    selectedRoleIds.filter(
-                                                        (id) => id !== role.id,
-                                                    );
+                                                selectedRoleIds.push(role.id);
                                             }
+                                        } else {
+                                            selectedRoleIds =
+                                                selectedRoleIds.filter(
+                                                    (id) => id !== role.id,
+                                                );
                                         }
-                                    "
+                                    }
+                                "
                             />
                             <span class="text-sm font-medium">{{
                                 role.label
@@ -608,28 +1049,38 @@ function userRoleIcon(role: UserRole): string | null {
             class="mb-4 border-green-500 bg-green-50 dark:bg-green-950"
         >
             <CircleCheck class="h-4 w-4" />
-            <AlertTitle>User created successfully</AlertTitle>
+            <AlertTitle>Usuario creado exitosamente</AlertTitle>
             <AlertDescription>
-                The temporary password for this user is:
+                La contraseña temporal para este usuario es:
                 <strong class="mt-2 block font-mono text-lg">{{
                     temporaryPassword
                 }}</strong>
                 <p class="mt-2 text-sm">
-                    Share this password securely with the user. They will be
-                    required to change it on first login.
+                    Comparta esta contraseña de forma segura con el usuario. Se
+                    le solicitará cambiarla en el primer inicio de sesión.
                 </p>
             </AlertDescription>
         </Alert>
 
-        <div class="min-h-0 mx-3 flex-1 overflow-auto rounded-md border" id="tour-table">
+        <div
+            class="mx-3 min-h-0 flex-1 overflow-auto rounded-md border"
+            id="tour-table"
+        >
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Email</th>
-                        <th class="px-4 py-3 font-medium">Role</th>
-                        <th class="px-4 py-3 text-right font-medium" id="tour-actions">
-                            Actions
+                        <th class="px-4 py-3 font-medium">Foto</th>
+                        <th class="px-4 py-3 font-medium">Nombre</th>
+                        <th class="px-4 py-3 font-medium">
+                            Correo Electrónico
+                        </th>
+                        <th class="px-4 py-3 font-medium">Estatus</th>
+                        <th class="px-4 py-3 font-medium">Rol</th>
+                        <th
+                            class="px-4 py-3 text-right font-medium"
+                            id="tour-actions"
+                        >
+                            Acciones
                         </th>
                     </tr>
                 </thead>
@@ -639,8 +1090,43 @@ function userRoleIcon(role: UserRole): string | null {
                         :key="item.id"
                         class="border-t"
                     >
+                        <td class="px-4 py-3">
+                            <Avatar class="h-9 w-9">
+                                <AvatarImage
+                                    v-if="item.photoUrl"
+                                    :src="item.photoUrl"
+                                    :alt="item.name"
+                                />
+                                <AvatarFallback>{{
+                                    item.name
+                                        .split(' ')
+                                        .map((n) => n[0])
+                                        .join('')
+                                        .slice(0, 2)
+                                        .toUpperCase()
+                                }}</AvatarFallback>
+                            </Avatar>
+                        </td>
                         <td class="px-4 py-3">{{ item.name }}</td>
                         <td class="px-4 py-3">{{ item.email }}</td>
+                        <td class="px-4 py-3">
+                            <span
+                                v-if="item.status"
+                                class="inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold"
+                                :class="
+                                    item.statusColorClass ??
+                                    'bg-muted text-muted-foreground'
+                                "
+                            >
+                                {{ item.statusLabel ?? item.status }}
+                            </span>
+                            <span
+                                v-else
+                                class="text-xs text-muted-foreground"
+                            >
+                                —
+                            </span>
+                        </td>
                         <td class="px-4 py-3">
                             <div
                                 v-if="item.roles && item.roles.length > 0"
@@ -674,7 +1160,7 @@ function userRoleIcon(role: UserRole): string | null {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            aria-label="Actions"
+                                            aria-label="Acciones"
                                         >
                                             <MoreVertical class="h-4 w-4" />
                                         </Button>
@@ -693,7 +1179,9 @@ function userRoleIcon(role: UserRole): string | null {
                                             Asignar rol
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            @click="confirmResetPassword(item)"
+                                            @click="
+                                                confirmResetPassword(item)
+                                            "
                                         >
                                             <Key class="mr-2 h-4 w-4" />
                                             Restablecer contraseña
@@ -711,10 +1199,10 @@ function userRoleIcon(role: UserRole): string | null {
                     </tr>
                     <tr v-if="!items.data.length">
                         <td
-                            colspan="4"
+                            colspan="6"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
-                            No users found.
+                            No se encontraron usuarios.
                         </td>
                     </tr>
                 </tbody>
@@ -722,17 +1210,20 @@ function userRoleIcon(role: UserRole): string | null {
         </div>
 
         <div
-            class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between" id="tour-pagination"
+            class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+            id="tour-pagination"
         >
             <div class="text-sm text-muted-foreground">
-                Showing {{ items.from }} to {{ items.to }} of
-                {{ items.total }} results.
+                Mostrando {{ items.from }} a {{ items.to }} de
+                {{ items.total }} resultados.
             </div>
             <div
                 class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
             >
                 <div class="flex items-center gap-2">
-                    <span class="text-sm text-muted-foreground">Per page</span>
+                    <span class="text-sm text-muted-foreground"
+                        >Por página</span
+                    >
                     <Select v-model="perPage">
                         <SelectTrigger class="w-20">
                             <SelectValue />
@@ -757,7 +1248,7 @@ function userRoleIcon(role: UserRole): string | null {
                             )
                         "
                     >
-                        Previous
+                        Anterior
                     </Button>
                     <Button
                         variant="outline"
@@ -771,7 +1262,7 @@ function userRoleIcon(role: UserRole): string | null {
                             )
                         "
                     >
-                        Next
+                        Siguiente
                     </Button>
                 </div>
             </div>

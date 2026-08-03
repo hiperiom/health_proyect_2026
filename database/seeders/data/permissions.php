@@ -35,12 +35,6 @@ return [
     ['name' => 'Update', 'slug' => 'permissions.update', 'module' => 'permissions', 'description' => 'Edit existing permissions'],
     ['name' => 'Delete', 'slug' => 'permissions.delete', 'module' => 'permissions', 'description' => 'Delete permissions'],
 
-    // Patients
-    ['name' => 'View',   'slug' => 'patients.read',   'module' => 'patients', 'description' => 'View the patients list and details'],
-    ['name' => 'Create', 'slug' => 'patients.create', 'module' => 'patients', 'description' => 'Create new patients'],
-    ['name' => 'Update', 'slug' => 'patients.update', 'module' => 'patients', 'description' => 'Edit existing patients'],
-    ['name' => 'Delete', 'slug' => 'patients.delete', 'module' => 'patients', 'description' => 'Delete patients'],
-
     ['name' => 'View', 'slug' => 'allergies.read', 'module' => 'allergies', 'description' => 'View the Allergies list and details'],
     ['name' => 'Create', 'slug' => 'allergies.create', 'module' => 'allergies', 'description' => 'Create new Allergies'],
     ['name' => 'Update', 'slug' => 'allergies.update', 'module' => 'allergies', 'description' => 'Edit existing Allergies'],

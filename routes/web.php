@@ -5,8 +5,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HealthBackgrounds\HealthBackgroundsController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Modules\ModuleController;
-use App\Http\Controllers\Patients\PatientPhotoController;
-use App\Http\Controllers\Patients\PatientsController;
 use App\Http\Controllers\Permissions\PermissionController;
 use App\Http\Controllers\Roles\RoleController;
 use App\Http\Controllers\RoleSelectionController;
@@ -35,11 +33,14 @@ require __DIR__.'/settings.php';
 Route::middleware(['auth', EnsureModuleAccess::class])->prefix('users')->name('users.')->group(function () {
     Route::get('/', [UserController::class, 'index'])->name('index');
     Route::post('/', [UserController::class, 'store'])->name('store');
+    Route::get('/check-email', [UserController::class, 'checkEmail'])->name('check-email');
     Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
     Route::patch('/{user}', [UserController::class, 'update'])->name('update');
     Route::patch('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');
     Route::post('/{user}/permissions', [UserController::class, 'assignPermissions'])->name('assignPermissions');
     Route::patch('/{user}/roles', [UserController::class, 'assignRoles'])->name('assignRoles');
+    Route::post('/{user}/photo', [UserController::class, 'photoStore'])->name('photo.store');
+    Route::delete('/{user}/photo', [UserController::class, 'photoDestroy'])->name('photo.destroy');
     Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
 });
 
@@ -70,18 +71,6 @@ Route::middleware(['auth', EnsureModuleAccess::class])->prefix('modules')->name(
     Route::delete('/{item}', [ModuleController::class, 'destroy'])->name('destroy');
 });
 
-Route::middleware(['auth', EnsureModuleAccess::class])->prefix('patients')->name('patients.')->group(function () {
-    Route::get('/', [PatientsController::class, 'index'])->name('index');
-    Route::post('/', [PatientsController::class, 'store'])->name('store');
-    Route::get('/check-dni', [PatientsController::class, 'checkDni'])->name('check-dni');
-    Route::get('/check-email', [PatientsController::class, 'checkEmail'])->name('check-email');
-    Route::get('/{item}/edit', [PatientsController::class, 'edit'])->name('edit');
-    Route::patch('/{item}', [PatientsController::class, 'update'])->name('update');
-    Route::delete('/{item}', [PatientsController::class, 'destroy'])->name('destroy');
-    Route::post('/{item}/photo', [PatientPhotoController::class, 'store'])->name('photo.store');
-    Route::delete('/{item}/photo', [PatientPhotoController::class, 'destroy'])->name('photo.destroy');
-});
-
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('allergies', [AllergiesController::class, 'index'])->name('allergies.index');
     Route::post('allergies', [AllergiesController::class, 'store'])->name('allergies.store');
@@ -96,13 +85,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('health-backgrounds/{item}', [HealthBackgroundsController::class, 'destroy'])->name('health-backgrounds.destroy');
 });
 use App\Http\Controllers\Doctors\DoctorsController;
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('doctors', [DoctorsController::class, 'index'])->name('doctors.index');
     Route::post('doctors', [DoctorsController::class, 'store'])->name('doctors.store');
     Route::get('doctors/{item}/edit', [DoctorsController::class, 'edit'])->name('doctors.edit');
     Route::patch('doctors/{item}', [DoctorsController::class, 'update'])->name('doctors.update');
     Route::delete('doctors/{item}', [DoctorsController::class, 'destroy'])->name('doctors.destroy');
-});use App\Http\Controllers\MedicalSpecialties\MedicalSpecialtiesController;
+});
+use App\Http\Controllers\MedicalSpecialties\MedicalSpecialtiesController;
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('medical-specialties', [MedicalSpecialtiesController::class, 'index'])->name('medical-specialties.index');
     Route::post('medical-specialties', [MedicalSpecialtiesController::class, 'store'])->name('medical-specialties.store');

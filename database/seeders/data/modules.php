@@ -15,10 +15,8 @@ return [
     ['name' => 'roles',        'display_name' => 'Roles',           'description' => 'Gestión y administración de Roles.'],
     ['name' => 'permissions',  'display_name' => 'Permisos',        'description' => 'Gestión y administración de Permisos.'],
     ['name' => 'modules',      'display_name' => 'Módulos',         'description' => 'Gestión y administración de Módulos.'],
-    ['name' => 'patients',     'display_name' => 'Pacientes',       'description' => 'Gestión y administración de Pacientes.'],
     ['name' => 'allergies', 'display_name' => 'Alergias', 'description' => 'Gestión y administración de Alergias.'],
     ['name' => 'doctors', 'display_name' => 'Doctores', 'description' => 'Gestión y administración de Doctores.'],
     ['name' => 'medical-specialties', 'display_name' => 'Especialidades Médicas', 'description' => 'Gestión y administración de Especialidades Médicas.'],
-
 
 ];

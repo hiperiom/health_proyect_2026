@@ -3,7 +3,6 @@ import {
     FileText,
     Key,
     Shield,
-    Users,
 } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
 
@@ -42,7 +41,6 @@ export const moduleSidebarConfig: Record<string, ModuleSidebarEntry> = {
     roles: { title: 'Roles', icon: Shield },
     permissions: { title: 'Permisos', icon: FileText },
     modules: { title: 'Modules', icon: Boxes },
-    patients: { title: 'Patients', icon: Users },
 };
 
 /**
@@ -67,7 +65,7 @@ export const defaultModuleSidebarEntry: ModuleSidebarItem = {
  *       title: 'Clínica',
  *       icon: Stethoscope,
  *       children: [
- *           { title: 'Patients',         icon: Users },
+ *           { title: 'Users',             icon: Key },
  *           { title: 'Medical Specialties', icon: Stethoscope },
  *       ],
  *   },
