@@ -102,7 +102,7 @@ const visibleModules = computed<string[]>(() => {
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
-            title: 'Pantalla Inicial',
+            title: 'Panel Principal',
             href: dashboardUrl.value,
             icon: LayoutGrid,
         },
