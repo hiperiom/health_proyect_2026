@@ -974,7 +974,7 @@ const startTour = () => {
                                         </div>
                                         <div class="grid gap-2">
                                             <Label for="dni"
-                                                >Número de Documento
+                                                >Documento de Identidad
                                                 <span
                                                     class="text-destructive"
                                                     >*</span
@@ -1177,7 +1177,7 @@ const startTour = () => {
                                         </div>
                                     </div>
                                     <div class="grid gap-2">
-                                        <Label for="address">Dirección</Label>
+                                        <Label for="address">Domicilio</Label>
                                         <Input
                                             id="address"
                                             name="address"
