@@ -214,6 +214,17 @@ test('users can be filtered by role slug in the index', function () {
         );
 });
 
+test('index exposes role filter options with slug values', function () {
+    $admin = User::factory()->create();
+
+    $this->actingAs($admin)
+        ->get(route('users.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('availableRoles.0.value', UserRole::Paciente->value)
+            ->where('availableRoles.1.value', UserRole::Doctor->value)
+        );
+});
+
 test('index returns user fields and select options', function () {
     $admin = User::factory()->create();
 

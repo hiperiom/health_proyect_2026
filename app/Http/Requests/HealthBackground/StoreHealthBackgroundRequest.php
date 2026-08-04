@@ -1,13 +1,9 @@
 <?php
-
 namespace App\Http\Requests\HealthBackground;
-
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreHealthBackgroundRequest extends FormRequest
-{
-    public function rules(): array
-    {
+class StoreHealthBackgroundRequest extends FormRequest {
+    public function rules(): array {
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],

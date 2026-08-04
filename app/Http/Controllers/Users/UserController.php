@@ -512,7 +512,7 @@ class UserController extends Controller
 
                 return [
                     'id' => $dbRole?->id ?? 0,
-                    'value' => $dbRole?->id ?? 0,
+                    'value' => $role->value,
                     'label' => $role->label(),
                     'slug' => $role->value,
                     'color_class' => $dbRole?->color_class ?? null,

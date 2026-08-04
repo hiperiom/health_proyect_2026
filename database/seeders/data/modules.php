@@ -20,5 +20,7 @@ return [
     ['name' => 'medical-specialties', 'display_name' => 'Especialidades Médicas', 'description' => 'Gestión y administración de Especialidades Médicas.'],
     ['name' => 'states', 'display_name' => 'Estados', 'description' => 'Gestión y administración de Estados.'],
     ['name' => 'municipalities', 'display_name' => 'Municipios', 'description' => 'Gestión y administración de Municipios.'],
+    ['name' => 'health-backgrounds', 'display_name' => 'Antecedentes de Salud', 'description' => 'Gestión y administración de Antecedentes de Salud.'],
+
 
 ];

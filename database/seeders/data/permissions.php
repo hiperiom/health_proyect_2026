@@ -59,4 +59,9 @@ return [
     ['name' => 'Create', 'slug' => 'municipalities.create', 'module' => 'municipalities', 'description' => 'Create new Municipios'],
     ['name' => 'Update', 'slug' => 'municipalities.update', 'module' => 'municipalities', 'description' => 'Edit existing Municipios'],
     ['name' => 'Delete', 'slug' => 'municipalities.delete', 'module' => 'municipalities', 'description' => 'Delete Municipios'],
+    // Antecedentes de Salud
+    ['name' => 'View',   'slug' => 'health-backgrounds.read',   'module' => 'health-backgrounds', 'description' => 'View the Antecedentes de Salud list and details'],
+    ['name' => 'Create', 'slug' => 'health-backgrounds.create', 'module' => 'health-backgrounds', 'description' => 'Create new Antecedentes de Salud'],
+    ['name' => 'Update', 'slug' => 'health-backgrounds.update', 'module' => 'health-backgrounds', 'description' => 'Edit existing Antecedentes de Salud'],
+    ['name' => 'Delete', 'slug' => 'health-backgrounds.delete', 'module' => 'health-backgrounds', 'description' => 'Delete Antecedentes de Salud'],
 ];
