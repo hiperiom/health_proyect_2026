@@ -55,6 +55,9 @@ class DatabaseSeeder extends Seeder
         $this->seedModules();
         $this->seedPermissions();
         $this->seedSuperuserAssociations();
+
+        $this->call(StateSeeder::class);
+        $this->call(MunicipalitySeeder::class);
     }
 
     /**

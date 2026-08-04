@@ -18,5 +18,7 @@ return [
     ['name' => 'allergies', 'display_name' => 'Alergias', 'description' => 'Gestión y administración de Alergias.'],
     ['name' => 'doctors', 'display_name' => 'Doctores', 'description' => 'Gestión y administración de Doctores.'],
     ['name' => 'medical-specialties', 'display_name' => 'Especialidades Médicas', 'description' => 'Gestión y administración de Especialidades Médicas.'],
+    ['name' => 'states', 'display_name' => 'Estados', 'description' => 'Gestión y administración de Estados.'],
+    ['name' => 'municipalities', 'display_name' => 'Municipios', 'description' => 'Gestión y administración de Municipios.'],
 
 ];

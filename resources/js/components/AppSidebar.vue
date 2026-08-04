@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { FileText, LayoutGrid } from '@lucide/vue';
+import { FileText, LayoutGrid, Map, MapPin } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -108,11 +108,45 @@ const mainNavItems = computed<NavItem[]>(() => {
         },
     ];
 
+    const hasStatesModule = visibleModules.value.includes('states');
+    const hasMunicipalitiesModule = visibleModules.value.includes('municipalities');
+
     for (const moduleName of visibleModules.value) {
+        // "states" y "municipalities" se agrupan bajo "Ubicación Geográfica".
+        if (moduleName === 'states' || moduleName === 'municipalities') {
+            continue;
+        }
+
         items.push({
             title: moduleTitle(moduleName),
             href: `/${moduleName}`,
             icon: FileText,
+        });
+    }
+
+    if (hasStatesModule || hasMunicipalitiesModule) {
+        const geoItems: NavItem[] = [];
+
+        if (hasStatesModule) {
+            geoItems.push({
+                title: moduleTitle('states'),
+                href: '/states',
+                icon: MapPin,
+            });
+        }
+
+        if (hasMunicipalitiesModule) {
+            geoItems.push({
+                title: moduleTitle('municipalities'),
+                href: '/municipalities',
+                icon: MapPin,
+            });
+        }
+
+        items.push({
+            title: 'Ubicación Geográfica',
+            icon: Map,
+            items: geoItems,
         });
     }
 

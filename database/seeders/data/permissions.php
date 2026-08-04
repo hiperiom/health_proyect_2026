@@ -49,4 +49,14 @@ return [
     ['name' => 'Create', 'slug' => 'medical-specialties.create', 'module' => 'medical-specialties', 'description' => 'Create new Especialidades Médicas'],
     ['name' => 'Update', 'slug' => 'medical-specialties.update', 'module' => 'medical-specialties', 'description' => 'Edit existing Especialidades Médicas'],
     ['name' => 'Delete', 'slug' => 'medical-specialties.delete', 'module' => 'medical-specialties', 'description' => 'Delete Especialidades Médicas'],
+    // Estados
+    ['name' => 'View',   'slug' => 'states.read',   'module' => 'states', 'description' => 'View the Estados list and details'],
+    ['name' => 'Create', 'slug' => 'states.create', 'module' => 'states', 'description' => 'Create new Estados'],
+    ['name' => 'Update', 'slug' => 'states.update', 'module' => 'states', 'description' => 'Edit existing Estados'],
+    ['name' => 'Delete', 'slug' => 'states.delete', 'module' => 'states', 'description' => 'Delete Estados'],
+    // Municipios
+    ['name' => 'View',   'slug' => 'municipalities.read',   'module' => 'municipalities', 'description' => 'View the Municipios list and details'],
+    ['name' => 'Create', 'slug' => 'municipalities.create', 'module' => 'municipalities', 'description' => 'Create new Municipios'],
+    ['name' => 'Update', 'slug' => 'municipalities.update', 'module' => 'municipalities', 'description' => 'Edit existing Municipios'],
+    ['name' => 'Delete', 'slug' => 'municipalities.delete', 'module' => 'municipalities', 'description' => 'Delete Municipios'],
 ];

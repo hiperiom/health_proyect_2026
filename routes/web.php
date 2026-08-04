@@ -103,3 +103,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('medical-specialties/{item}', [MedicalSpecialtiesController::class, 'update'])->name('medical-specialties.update');
     Route::delete('medical-specialties/{item}', [MedicalSpecialtiesController::class, 'destroy'])->name('medical-specialties.destroy');
 });
+use App\Http\Controllers\States\StatesController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('states', [StatesController::class, 'index'])->name('states.index');
+    Route::post('states', [StatesController::class, 'store'])->name('states.store');
+    Route::get('states/{item}/edit', [StatesController::class, 'edit'])->name('states.edit');
+    Route::patch('states/{item}', [StatesController::class, 'update'])->name('states.update');
+    Route::patch('states/{item}/toggle-active', [StatesController::class, 'toggleActive'])->name('states.toggleActive');
+    Route::delete('states/{item}', [StatesController::class, 'destroy'])->name('states.destroy');
+});
+use App\Http\Controllers\Municipalities\MunicipalitiesController;
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('municipalities', [MunicipalitiesController::class, 'index'])->name('municipalities.index');
+    Route::post('municipalities', [MunicipalitiesController::class, 'store'])->name('municipalities.store');
+    Route::get('municipalities/{item}/edit', [MunicipalitiesController::class, 'edit'])->name('municipalities.edit');
+    Route::patch('municipalities/{item}', [MunicipalitiesController::class, 'update'])->name('municipalities.update');
+    Route::patch('municipalities/{item}/toggle-active', [MunicipalitiesController::class, 'toggleActive'])->name('municipalities.toggleActive');
+    Route::delete('municipalities/{item}', [MunicipalitiesController::class, 'destroy'])->name('municipalities.destroy');
+});

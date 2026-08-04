@@ -115,7 +115,6 @@ const isParentActive = (item: NavItem): boolean =>
                     v-if="item.items && item.items.length > 0"
                     as-child
                     :default-open="hasActiveSubItem(item)"
-                    :open="hasActiveSubItem(item)"
                     class="group/collapsible"
                 >
                     <SidebarMenuItem>
