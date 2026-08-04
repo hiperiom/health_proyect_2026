@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Storage;
     'last_name',
     'nacionality',
     'dni',
+    'mrn',
     'birth_date',
     'gender',
     'phone_mobile',

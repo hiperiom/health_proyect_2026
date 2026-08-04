@@ -362,12 +362,15 @@ class UserController extends Controller
         $dni = trim((string) $request->validated('dni'));
         $ignoreUserId = $request->validated('ignore_id');
 
-        $exists = UsersProfile::query()
+        $profile = UsersProfile::query()
             ->when($ignoreUserId !== null, fn ($query) => $query->where('user_id', '!=', $ignoreUserId))
             ->where('dni', $dni)
-            ->exists();
+            ->first();
 
-        return response()->json(['exists' => $exists]);
+        return response()->json([
+            'exists' => $profile !== null,
+            'mrn' => $profile?->mrn,
+        ]);
     }
 
     public function photoStore(Request $request, User $user): RedirectResponse

@@ -15,3 +15,4 @@ export * from './medical_specialties';
 
 export * from './states';
 export * from './municipalities';
+export * from './medical_histories';

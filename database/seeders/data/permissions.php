@@ -64,4 +64,9 @@ return [
     ['name' => 'Create', 'slug' => 'health-backgrounds.create', 'module' => 'health-backgrounds', 'description' => 'Create new Antecedentes de Salud'],
     ['name' => 'Update', 'slug' => 'health-backgrounds.update', 'module' => 'health-backgrounds', 'description' => 'Edit existing Antecedentes de Salud'],
     ['name' => 'Delete', 'slug' => 'health-backgrounds.delete', 'module' => 'health-backgrounds', 'description' => 'Delete Antecedentes de Salud'],
+    // Historias Clínicas
+    ['name' => 'View',   'slug' => 'medical-histories.read',   'module' => 'medical-histories', 'description' => 'View the Historias Clínicas list and details'],
+    ['name' => 'Create', 'slug' => 'medical-histories.create', 'module' => 'medical-histories', 'description' => 'Create new Historias Clínicas'],
+    ['name' => 'Update', 'slug' => 'medical-histories.update', 'module' => 'medical-histories', 'description' => 'Edit existing Historias Clínicas'],
+    ['name' => 'Delete', 'slug' => 'medical-histories.delete', 'module' => 'medical-histories', 'description' => 'Delete Historias Clínicas'],
 ];

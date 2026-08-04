@@ -21,6 +21,8 @@ return [
     ['name' => 'states', 'display_name' => 'Estados', 'description' => 'Gestión y administración de Estados.'],
     ['name' => 'municipalities', 'display_name' => 'Municipios', 'description' => 'Gestión y administración de Municipios.'],
     ['name' => 'health-backgrounds', 'display_name' => 'Antecedentes de Salud', 'description' => 'Gestión y administración de Antecedentes de Salud.'],
+    ['name' => 'medical-histories', 'display_name' => 'Historias Clínicas', 'description' => 'Gestión y administración de Historias Clínicas.'],
+
 
 
 ];
