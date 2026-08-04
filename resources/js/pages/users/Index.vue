@@ -894,7 +894,7 @@ const startTour = () => {
                                     <div v-if="!editingItem">
                                         <Label>Fotografía</Label>
                                         <p
-                                            class="rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
+                                            class="rounded-md mt-2 border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
                                         >
                                             La fotografía se podrá cargar después de
                                             crear el usuario.

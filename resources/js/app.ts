@@ -52,6 +52,11 @@ createInertiaApp({
         });
 
         app.use(plugin);
+
+        if (import.meta.env.SSR || typeof window === 'undefined' || !el) {
+            return;
+        }
+
         app.mount(el);
 
         // Wire the i18n composable to the Inertia page props. Must
@@ -60,6 +65,10 @@ createInertiaApp({
         bootstrapI18nFromInertia();
     },
 }).then(() => {
+    if (import.meta.env.SSR || typeof window === 'undefined') {
+        return;
+    }
+
     initializeTheme();
     initializeFlashToast();
 });
