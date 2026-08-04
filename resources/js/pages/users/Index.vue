@@ -20,7 +20,6 @@ import 'driver.js/dist/driver.css';
 import { computed, ref, watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
-import UsersProfilePhotoUploader from '@/components/UsersProfilePhotoUploader.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -64,6 +63,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import UsersProfilePhotoUploader from '@/components/UsersProfilePhotoUploader.vue';
 import {
     assignRoles as assignRolesRoute,
     destroy,
@@ -464,15 +464,6 @@ function resetDniState(): void {
     dniMessage.value = null;
 }
 
-function closeSheet(): void {
-    open.value = false;
-    editingItem.value = null;
-    resetEmailState();
-    resetDniState();
-    emailValue.value = '';
-    dniValue.value = '';
-}
-
 async function validateEmail(): Promise<void> {
     const value = emailValue.value.trim();
 
@@ -518,10 +509,14 @@ async function validateEmail(): Promise<void> {
         }
 
         const payload = (await response.json()) as { exists: boolean };
+        const originalEmail = editingItem.value?.email?.trim() ?? '';
 
         if (payload.exists) {
             emailExists.value = true;
             emailMessage.value = 'Este correo electrónico ya está registrado.';
+        } else if (editingItem.value && value === originalEmail) {
+            emailExists.value = false;
+            emailMessage.value = '✅ Correo electrónico validado.';
         } else {
             resetEmailState();
             emailMessage.value = 'Correo disponible.';
@@ -743,7 +738,7 @@ const startTour = () => {
                 >
                     <HelpCircle class="h-4 w-4" />
                 </Button>
-                <Sheet v-model:open="open" @update:open="(value) => { if (!value) { editingItem.value = null; } }">
+                <Sheet v-model:open="open" @update:open="(value) => { if (!value) { editingItem = null; } }">
                     <SheetTrigger as-child>
                         <Button id="tour-new-btn" @click="openCreateSheet">
                             <Plus class="h-4 w-4" />
@@ -825,7 +820,7 @@ const startTour = () => {
                                             class="flex items-start gap-1 text-xs text-destructive"
                                         >
                                             <AlertCircle
-                                                class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                                class="mt-0.5 h-3.5 w-3.5 shrink-0"
                                             />
                                             <span>{{ emailMessage }}</span>
                                         </p>
@@ -835,9 +830,6 @@ const startTour = () => {
                                             "
                                             class="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
                                         >
-                                            <CheckCircle2
-                                                class="h-3.5 w-3.5"
-                                            />
                                             <span>{{ emailMessage }}</span>
                                         </p>
                                         <InputError :message="errors.email" />
@@ -850,7 +842,7 @@ const startTour = () => {
                                             ></Label
                                         >
                                         <Select v-model="statusValue">
-                                            <SelectTrigger>
+                                            <SelectTrigger class="w-full">
                                                 <SelectValue
                                                     placeholder="Seleccione"
                                                 />
@@ -1011,7 +1003,7 @@ const startTour = () => {
                                                 class="flex items-start gap-1 text-xs text-destructive"
                                             >
                                                 <AlertCircle
-                                                    class="mt-0.5 h-3.5 w-3.5 flex-shrink-0"
+                                                    class="mt-0.5 h-3.5 w-3.5 shrink-0"
                                                 />
                                                 <span>{{ dniMessage }}</span>
                                             </p>
@@ -1287,7 +1279,7 @@ const startTour = () => {
                         </span>
                     </div>
                     <div
-                        class="max-h-[200px] space-y-1 overflow-y-auto rounded-md border p-2"
+                        class="max-h-50 space-y-1 overflow-y-auto rounded-md border p-2"
                     >
                         <label
                             v-for="role in availableRoles"
@@ -1448,7 +1440,7 @@ const startTour = () => {
                                     class="h-2 w-24 overflow-hidden rounded-full bg-muted"
                                 >
                                     <div
-                                        class="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 transition-all duration-300"
+                                        class="h-full bg-linear-to-r from-red-500 via-yellow-500 to-green-500 transition-all duration-300"
                                         :style="{
                                             width: `${item.profileCompletion}%`,
                                         }"
