@@ -220,7 +220,7 @@ class UserController extends Controller
             $user->notify(new UserCreatedTemporaryPassword($temporaryPassword));
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('User created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Usuario creado exitosamente.')]);
         Inertia::flash('temporary_password', $temporaryPassword);
 
         return to_route('users.index');
@@ -317,7 +317,7 @@ class UserController extends Controller
                 'state_id',
                 'municipality_id',
                 'address',
-            ])->filter(fn ($value, $key) => $value !== null || in_array($key, ['phone_landline', 'state_id', 'municipality_id', 'address'], true))->all();
+            ])->filter(fn ($value, $key) => $value !== null || in_array($key, ['phone_landline', 'state_id', 'address'], true))->all();
 
             $profile = $user->usersProfile->first();
 
@@ -339,7 +339,7 @@ class UserController extends Controller
             }
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('User updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Usuario actualizado exitosamente.')]);
 
         return to_route('users.index');
     }
@@ -394,7 +394,7 @@ class UserController extends Controller
 
         $profile->update(['photo_path' => $path]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile photo updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Foto de perfil actualizada.')]);
         Inertia::flash('userProfilePhotoUrl', $profile->fresh()->photo_url);
 
         return back();
@@ -411,7 +411,7 @@ class UserController extends Controller
         $this->deletePhotoFile($profile);
         $profile->update(['photo_path' => null]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile photo removed.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Foto de perfil eliminada.')]);
         Inertia::flash('userProfilePhotoUrl', null);
 
         return back();
@@ -428,7 +428,7 @@ class UserController extends Controller
 
         $user->notify(new UserCreatedTemporaryPassword($temporaryPassword));
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Temporary password sent to the user.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Contraseña temporal enviada al usuario.')]);
 
         return to_route('users.index');
     }
@@ -437,7 +437,7 @@ class UserController extends Controller
     {
         $user->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('User deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Usuario eliminado exitosamente.')]);
 
         return to_route('users.index');
     }
@@ -453,7 +453,7 @@ class UserController extends Controller
 
         $user->permissions()->sync($permissionIds);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permissions updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permisos actualizados exitosamente.')]);
 
         return to_route('users.index');
     }
@@ -465,7 +465,7 @@ class UserController extends Controller
 
         $user->roles()->sync($roleIds);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Roles updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Roles actualizados exitosamente.')]);
 
         return to_route('users.index');
     }

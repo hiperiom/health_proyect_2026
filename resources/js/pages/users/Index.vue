@@ -158,8 +158,8 @@ const profileOpen = ref(true);
 // Collapsible "Ubicación geográfica": cerrado por defecto.
 const geoOpen = ref(false);
 
-// Estado seleccionado para filtrar municipios.
-const selectedStateId = ref<number | null>(props.item?.stateId ?? null);
+// Estado seleccionado para filtrar municipios (string para coincidir con SelectItem values).
+const selectedStateId = ref<string | null>(props.item?.stateId ? String(props.item.stateId) : null);
 
 // Valores de los Selects para sincronizar con hidden inputs.
 const statusValue = ref<string>(props.item?.status ?? 'active');
@@ -174,9 +174,16 @@ const filteredMunicipalities = computed<MunicipalityOption[]>(() => {
         return [];
     }
 
+    const stateIdNum = parseInt(selectedStateId.value, 10);
+
     return props.availableMunicipalities.filter(
-        (m) => m.state_id === selectedStateId.value,
+        (m) => m.state_id === stateIdNum,
     );
+});
+
+// Cuando cambia el estado, resetear el municipio seleccionado
+watch(selectedStateId, () => {
+    municipalityIdValue.value = '';
 });
 
 // Validación de correo en tiempo real (disponibilidad).
@@ -313,7 +320,7 @@ function openEditSheet(item: UserModel) {
     editingItem.value = item;
     selectedRoleIds.value = item.role_ids ?? [];
     profileOpen.value = true;
-    selectedStateId.value = item.stateId ?? null;
+    selectedStateId.value = item.stateId ? String(item.stateId) : null;
     statusValue.value = item.status ?? 'active';
     nacionalityValue.value = item.nacionality ?? 'V';
     genderValue.value = item.gender ?? 'M';
