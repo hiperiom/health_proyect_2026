@@ -10,6 +10,7 @@ import {
     MoreVertical,
     Pencil,
     Plus,
+    RefreshCw,
     Search,
     Shield,
     Trash,
@@ -72,7 +73,9 @@ import {
     update,
 } from '@/routes/users';
 import type {
+    MunicipalityOption,
     RoleOption,
+    StateOption,
     UserGenderOption,
     UserModel,
     UserNacionalityOption,
@@ -107,6 +110,8 @@ type Props = {
     availableStatuses?: UserStatusOption[];
     availableNacionalities?: UserNacionalityOption[];
     availableGenders?: UserGenderOption[];
+    availableStates?: StateOption[];
+    availableMunicipalities?: MunicipalityOption[];
     filters?: {
         search?: string;
         role?: string;
@@ -119,6 +124,8 @@ const props = withDefaults(defineProps<Props>(), {
     availableStatuses: () => [],
     availableNacionalities: () => [],
     availableGenders: () => [],
+    availableStates: () => [],
+    availableMunicipalities: () => [],
 });
 
 const availableRoles = computed<RoleOption[]>(() => props.availableRoles);
@@ -148,6 +155,30 @@ const perPage = ref<string>(
 // Collapsible "Perfil del usuario": abierto por defecto.
 const profileOpen = ref(true);
 
+// Collapsible "Ubicación geográfica": cerrado por defecto.
+const geoOpen = ref(false);
+
+// Estado seleccionado para filtrar municipios.
+const selectedStateId = ref<number | null>(props.item?.stateId ?? null);
+
+// Valores de los Selects para sincronizar con hidden inputs.
+const statusValue = ref<string>(props.item?.status ?? 'active');
+const nacionalityValue = ref<string>(props.item?.nacionality ?? 'V');
+const genderValue = ref<string>(props.item?.gender ?? 'M');
+const municipalityIdValue = ref<string>(
+    props.item?.municipalityId ? String(props.item.municipalityId) : '',
+);
+
+const filteredMunicipalities = computed<MunicipalityOption[]>(() => {
+    if (selectedStateId.value === null) {
+        return [];
+    }
+
+    return props.availableMunicipalities.filter(
+        (m) => m.state_id === selectedStateId.value,
+    );
+});
+
 // Validación de correo en tiempo real (disponibilidad).
 const emailValue = ref<string>(props.item?.email ?? '');
 const emailChecking = ref(false);
@@ -164,6 +195,14 @@ const dniMessage = ref<string | null>(null);
 
 let dniCheckAbort: AbortController | null = null;
 let dniCheckSeq = 0;
+
+// Valores de los Inputs para sincronizar con v-model.
+const firstNameValue = ref<string>(props.item?.firstName ?? '');
+const lastNameValue = ref<string>(props.item?.lastName ?? '');
+const birthDateValue = ref<string>(props.item?.birthDate ?? '');
+const phoneMobileValue = ref<string>(props.item?.phoneMobile ?? '');
+const phoneLandlineValue = ref<string>(props.item?.phoneLandline ?? '');
+const addressValue = ref<string>(props.item?.address ?? '');
 
 let searchDebounce: ReturnType<typeof setTimeout> | null = null;
 
@@ -263,10 +302,28 @@ watch(dniValue, (value) => {
     }
 });
 
+function reloadList() {
+    router.get(index().url, {}, {
+        preserveState: false,
+        preserveScroll: true,
+    });
+}
+
 function openEditSheet(item: UserModel) {
     editingItem.value = item;
     selectedRoleIds.value = item.role_ids ?? [];
     profileOpen.value = true;
+    selectedStateId.value = item.stateId ?? null;
+    statusValue.value = item.status ?? 'active';
+    nacionalityValue.value = item.nacionality ?? 'V';
+    genderValue.value = item.gender ?? 'M';
+    municipalityIdValue.value = item.municipalityId ? String(item.municipalityId) : '';
+    firstNameValue.value = item.firstName ?? '';
+    lastNameValue.value = item.lastName ?? '';
+    birthDateValue.value = item.birthDate ?? '';
+    phoneMobileValue.value = item.phoneMobile ?? '';
+    phoneLandlineValue.value = item.phoneLandline ?? '';
+    addressValue.value = item.address ?? '';
     open.value = true;
 }
 
@@ -274,6 +331,17 @@ function openCreateSheet() {
     editingItem.value = null;
     selectedRoleIds.value = [];
     profileOpen.value = true;
+    selectedStateId.value = null;
+    statusValue.value = 'active';
+    nacionalityValue.value = 'V';
+    genderValue.value = 'M';
+    municipalityIdValue.value = '';
+    firstNameValue.value = '';
+    lastNameValue.value = '';
+    birthDateValue.value = '';
+    phoneMobileValue.value = '';
+    phoneLandlineValue.value = '';
+    addressValue.value = '';
     open.value = true;
 }
 
@@ -655,6 +723,14 @@ const startTour = () => {
                 <Button
                     variant="outline"
                     size="icon"
+                    @click="reloadList"
+                    title="Recargar listado"
+                >
+                    <RefreshCw class="h-4 w-4" />
+                </Button>
+                <Button
+                    variant="outline"
+                    size="icon"
                     @click="startTour"
                     title="Guía del módulo"
                 >
@@ -699,6 +775,13 @@ const startTour = () => {
                             "
                             @error="(e) => { console.error('Form error:', e); }"
                         >
+                            <!-- Hidden inputs para sincronizar los Selects de shadcn/ui -->
+                            <input type="hidden" name="status" :value="statusValue" />
+                            <input type="hidden" name="nacionality" :value="nacionalityValue" />
+                            <input type="hidden" name="gender" :value="genderValue" />
+                            <input type="hidden" name="state_id" :value="selectedStateId ?? ''" />
+                            <input type="hidden" name="municipality_id" :value="municipalityIdValue" />
+
                             <!-- Sección: Datos del usuario -->
                             <div class="space-y-4">
                                 <h3
@@ -759,12 +842,7 @@ const startTour = () => {
                                                 >*</span
                                             ></Label
                                         >
-                                        <Select
-                                            name="status"
-                                            :default-value="
-                                                editingItem?.status ?? 'active'
-                                            "
-                                        >
+                                        <Select v-model="statusValue">
                                             <SelectTrigger>
                                                 <SelectValue
                                                     placeholder="Seleccione"
@@ -838,9 +916,7 @@ const startTour = () => {
                                             <Input
                                                 id="first_name"
                                                 name="first_name"
-                                                :default-value="
-                                                    editingItem?.firstName ?? ''
-                                                "
+                                                v-model="firstNameValue"
                                                 placeholder="Ej. Juan"
                                                 required
                                             />
@@ -859,9 +935,7 @@ const startTour = () => {
                                             <Input
                                                 id="last_name"
                                                 name="last_name"
-                                                :default-value="
-                                                    editingItem?.lastName ?? ''
-                                                "
+                                                v-model="lastNameValue"
                                                 placeholder="Ej. Pérez García"
                                                 required
                                             />
@@ -879,13 +953,7 @@ const startTour = () => {
                                                     >*</span
                                                 ></Label
                                             >
-                                            <Select
-                                                name="nacionality"
-                                                :default-value="
-                                                    editingItem?.nacionality ??
-                                                    'V'
-                                                "
-                                            >
+                                            <Select v-model="nacionalityValue">
                                                 <SelectTrigger>
                                                     <SelectValue
                                                         placeholder="Seleccione"
@@ -966,9 +1034,7 @@ const startTour = () => {
                                                 id="birth_date"
                                                 name="birth_date"
                                                 type="date"
-                                                :default-value="
-                                                    editingItem?.birthDate ?? ''
-                                                "
+                                                v-model="birthDateValue"
                                                 :min="birthDateMin"
                                                 :max="birthDateMax"
                                                 required
@@ -985,12 +1051,7 @@ const startTour = () => {
                                                     >*</span
                                                 ></Label
                                             >
-                                            <Select
-                                                name="gender"
-                                                :default-value="
-                                                    editingItem?.gender ?? 'M'
-                                                "
-                                            >
+                                            <Select v-model="genderValue">
                                                 <SelectTrigger>
                                                     <SelectValue
                                                         placeholder="Seleccione"
@@ -1023,10 +1084,7 @@ const startTour = () => {
                                             <Input
                                                 id="phone_mobile"
                                                 name="phone_mobile"
-                                                :default-value="
-                                                    editingItem?.phoneMobile ??
-                                                    ''
-                                                "
+                                                v-model="phoneMobileValue"
                                                 placeholder="04141234567"
                                                 required
                                             />
@@ -1041,10 +1099,7 @@ const startTour = () => {
                                             <Input
                                                 id="phone_landline"
                                                 name="phone_landline"
-                                                :default-value="
-                                                    editingItem?.phoneLandline ??
-                                                    ''
-                                                "
+                                                v-model="phoneLandlineValue"
                                                 placeholder="02121234567"
                                             />
                                             <InputError
@@ -1053,6 +1108,86 @@ const startTour = () => {
                                                 "
                                             />
                                         </div>
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+
+                            <!-- Collapsible: Ubicación geográfica -->
+                            <Collapsible
+                                v-model:open="geoOpen"
+                                class="rounded-md border"
+                            >
+                                <CollapsibleTrigger
+                                    class="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold hover:bg-muted/50"
+                                >
+                                    <span>Ubicación geográfica</span>
+                                    <ChevronDown
+                                        class="h-4 w-4 transition-transform duration-200"
+                                        :class="geoOpen ? 'rotate-180' : ''"
+                                    />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent
+                                    class="space-y-4 border-t px-4 py-4"
+                                >
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div class="grid gap-2">
+                                            <Label for="state_id">Estado</Label>
+                                            <Select v-model="selectedStateId">
+                                                <SelectTrigger>
+                                                    <SelectValue
+                                                        placeholder="Seleccione un estado"
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="state in availableStates"
+                                                        :key="state.id"
+                                                        :value="String(state.id)"
+                                                    >
+                                                        {{ state.name }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                :message="errors.state_id"
+                                            />
+                                        </div>
+                                        <div class="grid gap-2">
+                                            <Label for="municipality_id"
+                                                >Municipio</Label
+                                            >
+                                            <Select v-model="municipalityIdValue">
+                                                <SelectTrigger>
+                                                    <SelectValue
+                                                        placeholder="Seleccione un municipio"
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem
+                                                        v-for="municipality in filteredMunicipalities"
+                                                        :key="municipality.id"
+                                                        :value="String(municipality.id)"
+                                                    >
+                                                        {{ municipality.name }}
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError
+                                                :message="errors.municipality_id"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="grid gap-2">
+                                        <Label for="address">Dirección</Label>
+                                        <Input
+                                            id="address"
+                                            name="address"
+                                            v-model="addressValue"
+                                            placeholder="Ej. Av. Principal, Edif. Los Andes, Piso 2, Apto 2B"
+                                        />
+                                        <InputError
+                                            :message="errors.address"
+                                        />
                                     </div>
                                 </CollapsibleContent>
                             </Collapsible>
@@ -1323,7 +1458,7 @@ const startTour = () => {
                                         ({{
                                             item.missingFields.length
                                         }}
-                                        de 10 campos vacíos)
+                                        de 13 campos vacíos)
                                     </p>
                                     <template v-if="item.missingFields.length > 0">
                                         <p class="mb-1 text-muted-foreground">

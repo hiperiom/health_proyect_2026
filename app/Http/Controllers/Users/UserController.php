@@ -12,8 +12,10 @@ use App\Http\Requests\Users\CheckDniRequest;
 use App\Http\Requests\Users\CheckEmailRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
+use App\Models\Municipality;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\State;
 use App\Models\User;
 use App\Models\UsersProfile;
 use App\Notifications\UserCreatedTemporaryPassword;
@@ -73,6 +75,9 @@ class UserController extends Controller
                     'birth_date' => $profile?->birth_date,
                     'gender' => $profile?->gender,
                     'phone_mobile' => $profile?->phone_mobile,
+                    'state_id' => $profile?->state_id,
+                    'municipality_id' => $profile?->municipality_id,
+                    'address' => $profile?->address,
                 ];
 
                 $profileCompletionLabels = [
@@ -86,6 +91,9 @@ class UserController extends Controller
                     'birth_date' => 'Fecha de nacimiento',
                     'gender' => 'Género',
                     'phone_mobile' => 'Teléfono móvil',
+                    'state_id' => 'Estado',
+                    'municipality_id' => 'Municipio',
+                    'address' => 'Dirección',
                 ];
 
                 $missingFields = collect($profileCompletionFields)
@@ -138,6 +146,9 @@ class UserController extends Controller
                     'gender' => $profile?->gender?->value,
                     'phoneMobile' => $profile?->phone_mobile,
                     'phoneLandline' => $profile?->phone_landline,
+                    'stateId' => $profile?->state_id,
+                    'municipalityId' => $profile?->municipality_id,
+                    'address' => $profile?->address,
                     'createdAt' => $user->created_at?->toISOString(),
                     'updatedAt' => $user->updated_at?->toISOString(),
                 ];
@@ -150,6 +161,8 @@ class UserController extends Controller
             'availableStatuses' => $this->availableStatuses(),
             'availableNacionalities' => $this->availableNacionalities(),
             'availableGenders' => $this->availableGenders(),
+            'availableStates' => $this->availableStates(),
+            'availableMunicipalities' => $this->availableMunicipalities(),
             'filters' => [
                 'search' => $search,
                 'role' => $role,
@@ -162,6 +175,16 @@ class UserController extends Controller
     {
         $data = $request->validated();
         $temporaryPassword = Str::password(16);
+
+        // Normalizar campos opcionales: "" → null, y convertir IDs a enteros.
+        foreach (['state_id', 'municipality_id'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = ($data[$field] === '' || $data[$field] === null) ? null : (int) $data[$field];
+            }
+        }
+        if (array_key_exists('address', $data) && $data['address'] === '') {
+            $data['address'] = null;
+        }
 
         DB::transaction(function () use ($data, $temporaryPassword) {
             $user = User::create([
@@ -187,6 +210,9 @@ class UserController extends Controller
                 'gender' => $data['gender'],
                 'phone_mobile' => $data['phone_mobile'],
                 'phone_landline' => $data['phone_landline'] ?? null,
+                'state_id' => $data['state_id'] ?? null,
+                'municipality_id' => $data['municipality_id'] ?? null,
+                'address' => $data['address'] ?? null,
                 'user_id' => $user->id,
                 'created_by_user_id' => auth()->id(),
             ]);
@@ -226,12 +252,17 @@ class UserController extends Controller
                 'gender' => $profile?->gender?->value,
                 'phoneMobile' => $profile?->phone_mobile,
                 'phoneLandline' => $profile?->phone_landline,
+                'stateId' => $profile?->state_id,
+                'municipalityId' => $profile?->municipality_id,
+                'address' => $profile?->address,
             ],
             'availableRoles' => $this->availableRoles(),
             'allPermissions' => $this->allPermissions(),
             'availableStatuses' => $this->availableStatuses(),
             'availableNacionalities' => $this->availableNacionalities(),
             'availableGenders' => $this->availableGenders(),
+            'availableStates' => $this->availableStates(),
+            'availableMunicipalities' => $this->availableMunicipalities(),
         ]);
     }
 
@@ -240,6 +271,16 @@ class UserController extends Controller
         $data = $request->validated();
         $roleIds = $data['role_ids'] ?? null;
         unset($data['role_ids']);
+
+        // Normalizar campos opcionales: "" → null, y convertir IDs a enteros.
+        foreach (['state_id', 'municipality_id'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = ($data[$field] === '' || $data[$field] === null) ? null : (int) $data[$field];
+            }
+        }
+        if (array_key_exists('address', $data) && $data['address'] === '') {
+            $data['address'] = null;
+        }
 
         DB::transaction(function () use ($user, $data, $roleIds) {
             $email = $data['email'] ?? null;
@@ -273,12 +314,24 @@ class UserController extends Controller
                 'gender',
                 'phone_mobile',
                 'phone_landline',
-            ])->filter(fn ($value) => $value !== null || array_key_exists('phone_landline', $data))->all();
+                'state_id',
+                'municipality_id',
+                'address',
+            ])->filter(fn ($value, $key) => $value !== null || in_array($key, ['phone_landline', 'state_id', 'municipality_id', 'address'], true))->all();
 
             $profile = $user->usersProfile->first();
 
-            if ($profile !== null && $profileFields !== []) {
-                $profile->update($profileFields);
+            if ($profileFields !== []) {
+                if ($profile === null) {
+                    // Si no existe el perfil, crear uno nuevo
+                    UsersProfile::create(array_merge($profileFields, [
+                        'user_id' => $user->id,
+                        'created_by_user_id' => auth()->id(),
+                    ]));
+                } else {
+                    // Si existe, actualizar
+                    $profile->update($profileFields);
+                }
             }
 
             if ($roleIds !== null) {
@@ -500,6 +553,33 @@ class UserController extends Controller
             ->map(fn (Gender $gender): array => [
                 'value' => $gender->value,
                 'label' => $gender->label(),
+            ])
+            ->all();
+    }
+
+    /** @return array<int, array{id: int, name: string}> */
+    private function availableStates(): array
+    {
+        return State::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (State $state): array => [
+                'id' => $state->id,
+                'name' => $state->name,
+            ])
+            ->all();
+    }
+
+    /** @return array<int, array{id: int, name: string, state_id: int}> */
+    private function availableMunicipalities(): array
+    {
+        return Municipality::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'state_id'])
+            ->map(fn (Municipality $municipality): array => [
+                'id' => $municipality->id,
+                'name' => $municipality->name,
+                'state_id' => $municipality->state_id,
             ])
             ->all();
     }

@@ -15,6 +15,21 @@ class StoreUserRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        foreach (['state_id', 'municipality_id'] as $field) {
+            if ($this->has($field) && $this->input($field) === '') {
+                $this->merge([$field => null]);
+            }
+        }
+        if ($this->has('address') && $this->input('address') === '') {
+            $this->merge(['address' => null]);
+        }
+        if ($this->has('phone_landline') && $this->input('phone_landline') === '') {
+            $this->merge(['phone_landline' => null]);
+        }
+    }
+
     public function rules(): array
     {
         $currentYear = (int) date('Y');
@@ -30,6 +45,9 @@ class StoreUserRequest extends FormRequest
             'gender' => ['required', 'string', Rule::in(Gender::values())],
             'phone_mobile' => ['required', 'string', 'max:30'],
             'phone_landline' => ['nullable', 'string', 'max:30'],
+            'state_id' => ['nullable', 'integer', 'exists:states,id'],
+            'municipality_id' => ['nullable', 'integer', 'exists:municipalities,id'],
+            'address' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

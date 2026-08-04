@@ -15,6 +15,21 @@ class UpdateUserRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        foreach (['state_id', 'municipality_id'] as $field) {
+            if ($this->has($field) && $this->input($field) === '') {
+                $this->merge([$field => null]);
+            }
+        }
+        if ($this->has('address') && $this->input('address') === '') {
+            $this->merge(['address' => null]);
+        }
+        if ($this->has('phone_landline') && $this->input('phone_landline') === '') {
+            $this->merge(['phone_landline' => null]);
+        }
+    }
+
     public function rules(): array
     {
         $userId = $this->route('user')?->id ?? $this->route('user');
@@ -31,6 +46,9 @@ class UpdateUserRequest extends FormRequest
             'gender' => ['sometimes', 'required', 'string', Rule::in(Gender::values())],
             'phone_mobile' => ['sometimes', 'required', 'string', 'max:30'],
             'phone_landline' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'state_id' => ['sometimes', 'nullable', 'integer', 'exists:states,id'],
+            'municipality_id' => ['sometimes', 'nullable', 'integer', 'exists:municipalities,id'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'role_ids' => ['sometimes', 'array'],
             'role_ids.*' => ['integer', 'exists:roles,id'],
         ];

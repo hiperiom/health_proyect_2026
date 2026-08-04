@@ -26,6 +26,9 @@ use Illuminate\Support\Facades\Storage;
     'gender',
     'phone_mobile',
     'phone_landline',
+    'state_id',
+    'municipality_id',
+    'address',
     'created_by_user_id',
     'user_id',
 ])]
@@ -63,6 +66,18 @@ class UsersProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** @return BelongsTo<State, $this> */
+    public function state(): BelongsTo
+    {
+        return $this->belongsTo(State::class);
+    }
+
+    /** @return BelongsTo<Municipality, $this> */
+    public function municipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class);
     }
 
     /** @return Attribute<string|null, string|null> */

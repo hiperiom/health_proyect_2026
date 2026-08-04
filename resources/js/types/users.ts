@@ -40,6 +40,17 @@ export type UserGenderOption = {
     label: string;
 };
 
+export type StateOption = {
+    id: number;
+    name: string;
+};
+
+export type MunicipalityOption = {
+    id: number;
+    name: string;
+    state_id: number;
+};
+
 export type UserModel = {
     id: number;
     name: string;
@@ -63,6 +74,9 @@ export type UserModel = {
     gender?: string | null;
     phoneMobile?: string | null;
     phoneLandline?: string | null;
+    stateId?: number | null;
+    municipalityId?: number | null;
+    address?: string | null;
     status?: string | null;
     statusLabel?: string | null;
     statusColorClass?: string | null;
