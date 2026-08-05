@@ -104,11 +104,7 @@ class MakeCrudCommand extends Command
         $this->info('Regenerating Wayfinder types...');
         $this->call('wayfinder:generate', ['--with-form' => true]);
         $this->info('CRUD generated successfully!');
-
-        if ($this->option('migrate')) {
-            $this->info('Running migration...');
-            $this->call('migrate:fresh');
-        }
+        
         $skiptests = $this->option('skip-tests') ? true : false;
         if (! $skiptests) {
             $this->newLine();

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Resources\MedicalHistory;
 
 use Illuminate\Http\Request;
@@ -8,6 +9,9 @@ class MedicalHistoryResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $patient = $this->patient;
+        $profile = $patient?->usersProfile?->first();
+
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
@@ -34,6 +38,13 @@ class MedicalHistoryResource extends JsonResource
             'language' => $this->language,
             'createdAt' => $this->created_at?->toISOString(),
             'updatedAt' => $this->updated_at?->toISOString(),
+            'patient' => [
+                'firstName' => $profile?->first_name,
+                'lastName' => $profile?->last_name,
+                'dni' => $profile?->dni,
+                'email' => $patient?->email,
+                'photoUrl' => $profile?->photo_url,
+            ],
         ];
     }
 }

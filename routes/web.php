@@ -126,9 +126,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 use App\Http\Controllers\EncounterController;
 use App\Http\Controllers\MedicalHistories\MedicalHistoriesController;
 use App\Http\Controllers\ServiceRequestController;
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('medical-histories', [MedicalHistoriesController::class, 'index'])->name('medical-histories.index');
     Route::post('medical-histories', [MedicalHistoriesController::class, 'store'])->name('medical-histories.store');
+    Route::get('medical-histories/search', [MedicalHistoriesController::class, 'search'])->name('medical-histories.search');
     Route::get('medical-histories/{item}/edit', [MedicalHistoriesController::class, 'edit'])->name('medical-histories.edit');
     Route::patch('medical-histories/{item}', [MedicalHistoriesController::class, 'update'])->name('medical-histories.update');
     Route::delete('medical-histories/{item}', [MedicalHistoriesController::class, 'destroy'])->name('medical-histories.destroy');
