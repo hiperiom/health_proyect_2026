@@ -63,7 +63,7 @@ class PermissionController extends Controller
     {
         $item = Permission::create($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permission created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permiso creado exitosamente.')]);
 
         return to_route('permissions.index');
     }
@@ -85,7 +85,7 @@ class PermissionController extends Controller
     {
         $item->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permission updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permiso actualizado exitosamente.')]);
 
         return to_route('permissions.index');
     }
@@ -94,7 +94,7 @@ class PermissionController extends Controller
     {
         $item->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permission deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permiso eliminado exitosamente.')]);
 
         return to_route('permissions.index');
     }

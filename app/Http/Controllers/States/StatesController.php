@@ -30,7 +30,7 @@ class StatesController extends Controller
     public function store(StoreStateRequest $request): RedirectResponse
     {
         $this->service->store($request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estados created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estado creado exitosamente.')]);
 
         return to_route('states.index');
     }
@@ -45,7 +45,7 @@ class StatesController extends Controller
     public function update(UpdateStateRequest $request, State $item): RedirectResponse
     {
         $this->service->update($item, $request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estados updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estado actualizado exitosamente.')]);
 
         return to_route('states.index');
     }
@@ -53,7 +53,7 @@ class StatesController extends Controller
     public function toggleActive(Request $request, State $item): RedirectResponse
     {
         $this->service->toggleActive($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estados updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estado actualizado exitosamente.')]);
 
         return to_route('states.index');
     }
@@ -61,7 +61,7 @@ class StatesController extends Controller
     public function destroy(Request $request, State $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estados deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Estado eliminado exitosamente.')]);
 
         return to_route('states.index');
     }

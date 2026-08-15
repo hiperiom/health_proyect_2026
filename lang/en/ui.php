@@ -282,4 +282,16 @@ return [
         ],
     ],
 
+    'mail' => [
+        'temporary_password' => [
+            'subject' => 'Your account has been created',
+            'greeting' => 'Hello :name!',
+            'intro' => 'An account has been created for you on :app.',
+            'password_label' => 'Your temporary password is:',
+            'login_action' => 'Log in',
+            'change_requirement' => 'You will be required to change this password on your first login.',
+            'change_advice' => 'For security reasons, please change your password as soon as possible.',
+        ],
+    ],
+
 ];

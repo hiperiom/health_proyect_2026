@@ -30,7 +30,7 @@ class MedicalSpecialtiesController extends Controller
     public function store(StoreMedicalSpecialtyRequest $request): RedirectResponse
     {
         $this->service->store($request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Especialidades Médicas created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Especialidad médica creada exitosamente.')]);
 
         return to_route('medical-specialties.index');
     }
@@ -45,7 +45,7 @@ class MedicalSpecialtiesController extends Controller
     public function update(UpdateMedicalSpecialtyRequest $request, MedicalSpecialty $item): RedirectResponse
     {
         $this->service->update($item, $request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Especialidades Médicas updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Especialidad médica actualizada exitosamente.')]);
 
         return to_route('medical-specialties.index');
     }
@@ -53,7 +53,7 @@ class MedicalSpecialtiesController extends Controller
     public function destroy(Request $request, MedicalSpecialty $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Especialidades Médicas deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Especialidad médica eliminada exitosamente.')]);
 
         return to_route('medical-specialties.index');
     }

@@ -148,7 +148,7 @@ function deleteItem() {
 </script>
 
 <template>
-    <Head title="Permissions" />
+    <Head title="Permisos" />
 
     <div class="flex h-full flex-col space-y-6">
         <div
@@ -156,8 +156,8 @@ function deleteItem() {
         >
             <Heading
                 variant="small"
-                title="Permissions"
-                description="Manage system permissions"
+                title="Permisos"
+                description="Gestiona los permisos del sistema"
             />
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="relative w-full sm:w-72">
@@ -167,16 +167,16 @@ function deleteItem() {
                     <Input
                         v-model="search"
                         type="search"
-                        placeholder="Search by name or slug..."
+                        placeholder="Buscar por nombre o slug..."
                         class="pl-8"
                     />
                 </div>
                 <Select v-model="selectedModule">
                     <SelectTrigger class="w-full sm:w-40">
-                        <SelectValue placeholder="All modules" />
+                        <SelectValue placeholder="Todos los módulos" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">All modules</SelectItem>
+                        <SelectItem value="all">Todos los módulos</SelectItem>
                         <SelectItem
                             v-for="module in availableModules"
                             :key="module"
@@ -190,20 +190,23 @@ function deleteItem() {
                     <SheetTrigger as-child>
                         <Button>
                             <Plus class="h-4 w-4" />
-                            New Permission
+                            Nuevo Permiso
                         </Button>
                     </SheetTrigger>
                     <SheetContent>
                         <SheetHeader>
                             <SheetTitle
                                 >{{
-                                    editingItem ? 'Edit' : 'Create'
+                                    editingItem ? 'Editar' : 'Crear'
                                 }}
-                                Permission</SheetTitle
+                                Permiso</SheetTitle
                             >
                             <SheetDescription>
-                                {{ editingItem ? 'Update' : 'Create a new' }}
-                                permission.
+                                {{
+                                    editingItem
+                                        ? 'Actualiza el permiso.'
+                                        : 'Crea un nuevo permiso.'
+                                }}
                             </SheetDescription>
                         </SheetHeader>
                         <Form
@@ -221,12 +224,12 @@ function deleteItem() {
                             "
                         >
                             <div class="grid gap-2">
-                                <Label for="name">Name</Label>
+                                <Label for="name">Nombre</Label>
                                 <Input
                                     id="name"
                                     name="name"
                                     :default-value="editingItem?.name"
-                                    placeholder="View"
+                                    placeholder="Ver"
                                     required
                                 />
                                 <InputError :message="errors.name" />
@@ -243,7 +246,7 @@ function deleteItem() {
                                 <InputError :message="errors.slug" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="module">Module</Label>
+                                <Label for="module">Módulo</Label>
                                 <Input
                                     id="module"
                                     name="module"
@@ -254,24 +257,24 @@ function deleteItem() {
                                 <InputError :message="errors.module" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="description">Description</Label>
+                                <Label for="description">Descripción</Label>
                                 <textarea
                                     id="description"
                                     name="description"
                                     :default-value="
                                         editingItem?.description ?? ''
                                     "
-                                    placeholder="What this permission allows"
+                                    placeholder="Qué permite este permiso"
                                     class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none"
                                 />
                                 <InputError :message="errors.description" />
                             </div>
                             <SheetFooter>
                                 <SheetClose as-child>
-                                    <Button variant="secondary">Cancel</Button>
+                                    <Button variant="secondary">Cancelar</Button>
                                 </SheetClose>
                                 <Button type="submit" :disabled="processing">
-                                    {{ editingItem ? 'Update' : 'Create' }}
+                                    {{ editingItem ? 'Actualizar' : 'Crear' }}
                                 </Button>
                             </SheetFooter>
                         </Form>
@@ -286,20 +289,20 @@ function deleteItem() {
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete Permission</DialogTitle>
+                    <DialogTitle>Eliminar Permiso</DialogTitle>
                     <DialogDescription>
-                        Are you sure you want to delete "{{
+                        ¿Estás seguro de que quieres eliminar "{{
                             itemToDelete?.name
-                        }}" ({{ itemToDelete?.slug }})? This action cannot be
-                        undone.
+                        }}" ({{ itemToDelete?.slug }})? Esta acción no se
+                        puede deshacer.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
+                        <Button variant="secondary">Cancelar</Button>
                     </DialogClose>
                     <Button variant="destructive" @click="deleteItem">
-                        Delete
+                        Eliminar
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -309,12 +312,12 @@ function deleteItem() {
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
+                        <th class="px-4 py-3 font-medium">Nombre</th>
                         <th class="px-4 py-3 font-medium">Slug</th>
-                        <th class="px-4 py-3 font-medium">Module</th>
-                        <th class="px-4 py-3 font-medium">Description</th>
+                        <th class="px-4 py-3 font-medium">Módulo</th>
+                        <th class="px-4 py-3 font-medium">Descripción</th>
                         <th class="px-4 py-3 text-right font-medium">
-                            Actions
+                            Acciones
                         </th>
                     </tr>
                 </thead>
@@ -341,7 +344,7 @@ function deleteItem() {
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            aria-label="Actions"
+                                            aria-label="Acciones"
                                         >
                                             <MoreVertical class="h-4 w-4" />
                                         </Button>
@@ -351,13 +354,13 @@ function deleteItem() {
                                             @click="openEditSheet(item)"
                                         >
                                             <Pencil class="mr-2 h-4 w-4" />
-                                            Edit
+                                            Editar
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="confirmDelete(item)"
                                         >
                                             <Trash class="mr-2 h-4 w-4" />
-                                            Delete
+                                            Eliminar
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -369,7 +372,7 @@ function deleteItem() {
                             colspan="5"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
-                            No permissions found.
+                            No se encontraron permisos.
                         </td>
                     </tr>
                 </tbody>
@@ -380,14 +383,14 @@ function deleteItem() {
             class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
         >
             <div class="text-sm text-muted-foreground">
-                Showing {{ items.from }} to {{ items.to }} of
-                {{ items.total }} results.
+                Mostrando {{ items.from }} a {{ items.to }} de
+                {{ items.total }} resultados.
             </div>
             <div
                 class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
             >
                 <div class="flex items-center gap-2">
-                    <span class="text-sm text-muted-foreground">Per page</span>
+                    <span class="text-sm text-muted-foreground">Por página</span>
                     <Select v-model="perPage">
                         <SelectTrigger class="w-20">
                             <SelectValue />
@@ -412,7 +415,7 @@ function deleteItem() {
                             )
                         "
                     >
-                        Previous
+                        Anterior
                     </Button>
                     <Button
                         variant="outline"
@@ -426,7 +429,7 @@ function deleteItem() {
                             )
                         "
                     >
-                        Next
+                        Siguiente
                     </Button>
                 </div>
             </div>

@@ -50,7 +50,7 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
                 {{
                     isLoading
                         ? (props.loadingLabel ?? 'Autenticando...')
-                        : (props.label ?? 'Iniciar sesiÃ³n con una llave de acceso')
+                        : (props.label ?? 'Iniciar sesión con una llave de acceso')
                 }}
             </Button>
 
@@ -65,7 +65,7 @@ const { verify, isLoading, error, isSupported } = usePasskeyVerify({
             </div>
             <div class="relative flex justify-center text-xs uppercase">
                 <span class="bg-background px-2 text-muted-foreground">
-                    {{ props.separator ?? 'O continÃºa con correo electrÃ³nico' }}
+                    {{ props.separator ?? 'O continúa con correo electrónico' }}
                 </span>
             </div>
         </div>

@@ -6,6 +6,7 @@ use App\Jobs\WriteAuditLogJob;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\File\File;
 
 class AuditLogMiddleware
 {
@@ -22,13 +23,45 @@ class AuditLogMiddleware
                 'method' => $request->method(),
                 'path' => $request->path(),
                 'query' => $request->query(),
-                'body' => $request->except(['password', 'password_confirmation']),
+                'body' => $this->sanitizeRequestData(
+                    $request->except(['password', 'password_confirmation'])
+                ),
             ],
             'ip_address' => $request->ip(),
             'performed_at' => now()->utc()->toIso8601String(),
         ]);
 
         return $response;
+    }
+
+    /**
+     * Recursively strip uploaded files and any other non-serializable
+     * value from the request input so the audit job can be queued.
+     *
+     * @param  array<mixed>  $data
+     * @return array<mixed>
+     */
+    protected function sanitizeRequestData(array $data): array
+    {
+        $sanitized = [];
+
+        foreach ($data as $key => $value) {
+            if ($value instanceof File) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeRequestData($value);
+
+                continue;
+            }
+
+            if (is_scalar($value) || $value === null) {
+                $sanitized[$key] = $value;
+            }
+        }
+
+        return $sanitized;
     }
 
     protected function detectAction(string $method): string
@@ -51,7 +84,7 @@ class AuditLogMiddleware
     {
         $route = $request->route();
 
-        if (!$route) {
+        if (! $route) {
             return null;
         }
 

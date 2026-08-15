@@ -2,13 +2,15 @@
 
 use App\Enums\Gender;
 use App\Enums\Nacionality;
-use App\Enums\UserStatus;
 use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UsersProfile;
 use App\Notifications\UserCreatedTemporaryPassword;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     Notification::fake();
@@ -160,15 +162,172 @@ test('update edits the user account and the user profile', function () {
     ]);
 });
 
-test('admin can reset user password and send temporary password notification', function () {
+test('admin can reset another user password and send temporary password notification', function () {
+    $admin = User::factory()->create();
     $user = User::factory()->create();
+    $originalHash = $user->password;
 
-    $this->actingAs($user)
+    $this->actingAs($admin)
         ->patch(route('users.reset-password', $user))
         ->assertRedirect(route('users.index'));
 
     Notification::assertSentTo($user, UserCreatedTemporaryPassword::class);
-    $this->assertFalse($user->refresh()->password_updated);
+    $this->assertNotSame($originalHash, $user->refresh()->password);
+    $this->assertFalse($user->password_updated);
+});
+
+test('user cannot reset their own password', function () {
+    $user = User::factory()->create();
+    $originalHash = $user->password;
+
+    $this->actingAs($user)
+        ->patch(route('users.reset-password', $user))
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    Notification::assertNothingSent();
+    $this->assertSame($originalHash, $user->refresh()->password);
+});
+
+test('non-superuser cannot reset a superuser password', function () {
+    $admin = User::factory()->create();
+    $superuser = User::factory()->superusuario()->create(['email' => 'super.uno@test.com']);
+    $originalHash = $superuser->password;
+
+    $this->actingAs($admin)
+        ->patch(route('users.reset-password', $superuser))
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    Notification::assertNothingSent();
+    $this->assertSame($originalHash, $superuser->refresh()->password);
+});
+
+test('user cannot delete their own account', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->delete(route('users.destroy', $user))
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertDatabaseHas('users', ['id' => $user->id]);
+});
+
+test('non-superuser cannot delete a superuser', function () {
+    $admin = User::factory()->create();
+    $superuser = User::factory()->superusuario()->create(['email' => 'super.dos@test.com']);
+
+    $this->actingAs($admin)
+        ->delete(route('users.destroy', $superuser))
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertDatabaseHas('users', ['id' => $superuser->id]);
+});
+
+test('superuser can delete another superuser when more than one exists', function () {
+    $actingSuperuser = User::factory()->superusuario()->create(['email' => 'super.actor@test.com']);
+    $targetSuperuser = User::factory()->superusuario()->create(['email' => 'super.target@test.com']);
+
+    $this->actingAs($actingSuperuser)
+        ->delete(route('users.destroy', $targetSuperuser))
+        ->assertRedirect(route('users.index'));
+
+    $this->assertDatabaseMissing('users', ['id' => $targetSuperuser->id]);
+});
+
+test('superuser cannot remove their own superuser role', function () {
+    $superuser = User::factory()->superusuario()->create(['email' => 'super.tres@test.com']);
+    $paciente = Role::query()->where('slug', UserRole::Paciente->value)->firstOrFail();
+
+    $this->actingAs($superuser)
+        ->patch(route('users.assignRoles', $superuser), [
+            'role_ids' => [$paciente->id],
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertTrue(
+        $superuser->refresh()->roles()->where('slug', UserRole::Superusuario->value)->exists()
+    );
+});
+
+test('superuser can remove the superuser role from another superuser when more than one exists', function () {
+    $actingSuperuser = User::factory()->superusuario()->create(['email' => 'super.actor2@test.com']);
+    $targetSuperuser = User::factory()->superusuario()->create(['email' => 'super.target2@test.com']);
+    $paciente = Role::query()->where('slug', UserRole::Paciente->value)->firstOrFail();
+
+    $this->actingAs($actingSuperuser)
+        ->patch(route('users.assignRoles', $targetSuperuser), [
+            'role_ids' => [$paciente->id],
+        ])
+        ->assertRedirect(route('users.index'));
+
+    $this->assertFalse(
+        $targetSuperuser->refresh()->roles()->where('slug', UserRole::Superusuario->value)->exists()
+    );
+});
+
+test('non-superuser cannot assign the superuser role', function () {
+    $admin = User::factory()->create();
+    $user = User::factory()->create();
+    $superuserRole = Role::query()->where('slug', UserRole::Superusuario->value)->firstOrFail();
+
+    $this->actingAs($admin)
+        ->patch(route('users.assignRoles', $user), [
+            'role_ids' => [$superuserRole->id],
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertFalse(
+        $user->refresh()->roles()->where('slug', UserRole::Superusuario->value)->exists()
+    );
+});
+
+test('user cannot deactivate their own account', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patch(route('users.update', $user), [
+            'status' => UserStatus::Inactive->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertSame(UserStatus::Active, $user->refresh()->status);
+});
+
+test('non-superuser cannot deactivate the last active superuser', function () {
+    $admin = User::factory()->create();
+    $superuser = User::factory()->superusuario()->create(['email' => 'super.cuatro@test.com']);
+
+    $this->actingAs($admin)
+        ->patch(route('users.update', $superuser), [
+            'status' => UserStatus::Inactive->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertSame(UserStatus::Active, $superuser->refresh()->status);
+});
+
+test('non-superuser cannot change the roles of a superuser through update', function () {
+    $admin = User::factory()->create();
+    $superuser = User::factory()->superusuario()->create(['email' => 'super.cinco@test.com']);
+    $paciente = Role::query()->where('slug', UserRole::Paciente->value)->firstOrFail();
+
+    $this->actingAs($admin)
+        ->patch(route('users.update', $superuser), [
+            'role_ids' => [$paciente->id],
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('inertia.flash_data.toast.type', 'error');
+
+    $this->assertTrue(
+        $superuser->refresh()->roles()->where('slug', UserRole::Superusuario->value)->exists()
+    );
 });
 
 test('user role is updated through the pivot table', function () {
@@ -276,4 +435,66 @@ test('check-email requires a valid email parameter', function () {
 test('check-email redirects guests to the login page', function () {
     $this->get(route('users.check-email', ['email' => 'test@example.com']))
         ->assertRedirect('/login');
+});
+
+test('admin can upload a user profile photo', function () {
+    Storage::fake('public');
+
+    $admin = User::factory()->create();
+    $user = User::factory()->create();
+    $profile = UsersProfile::factory()->create([
+        'user_id' => $user->id,
+        'created_by_user_id' => $admin->id,
+    ]);
+
+    $file = UploadedFile::fake()->image('foto.png', 512, 512);
+
+    $this->actingAs($admin)
+        ->post(route('users.photo.store', $user), ['photo' => $file])
+        ->assertRedirect();
+
+    $this->assertNotSame(null, $profile->refresh()->photo_path);
+    Storage::disk('public')->assertExists($profile->photo_path);
+
+    $this->assertDatabaseHas('audit_logs', [
+        'target_resource' => 'users.photo.store',
+        'action' => 'INSERT',
+    ]);
+});
+
+test('admin can remove a user profile photo', function () {
+    Storage::fake('public');
+
+    $admin = User::factory()->create();
+    $user = User::factory()->create();
+    $profile = UsersProfile::factory()->create([
+        'user_id' => $user->id,
+        'created_by_user_id' => $admin->id,
+        'photo_path' => 'users-profiles/photos/old.png',
+    ]);
+    Storage::disk('public')->put($profile->photo_path, 'fake-content');
+
+    $this->actingAs($admin)
+        ->delete(route('users.photo.destroy', $user))
+        ->assertRedirect();
+
+    $this->assertSame(null, $profile->refresh()->photo_path);
+    Storage::disk('public')->assertMissing($profile->photo_path);
+});
+
+test('photo upload is rejected for unsupported formats', function () {
+    Storage::fake('public');
+
+    $admin = User::factory()->create();
+    $user = User::factory()->create();
+    UsersProfile::factory()->create([
+        'user_id' => $user->id,
+        'created_by_user_id' => $admin->id,
+    ]);
+
+    $file = UploadedFile::fake()->create('documento.txt', 100, 'text/plain');
+
+    $this->actingAs($admin)
+        ->post(route('users.photo.store', $user), ['photo' => $file])
+        ->assertSessionHasErrors('photo');
 });

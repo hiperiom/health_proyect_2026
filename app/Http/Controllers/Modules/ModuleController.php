@@ -89,10 +89,10 @@ class ModuleController extends Controller
         $toast = [
             'type' => $generated['success'] ? 'success' : 'error',
             'message' => $generated['success']
-                ? __('Module saved, CRUD generated for ":name" and superusuario permissions updated.', [
+                ? __('Módulo guardado, CRUD generado para ":name" y permisos de superusuario actualizados.', [
                     'name' => $moduleName,
                 ])
-                : __('Module saved, but the CRUD could not be generated: :error', [
+                : __('Módulo guardado, pero no se pudo generar el CRUD: :error', [
                     'error' => $generated['error'],
                 ]),
         ];
@@ -118,7 +118,7 @@ class ModuleController extends Controller
     {
         $item->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Module updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Módulo actualizado exitosamente.')]);
 
         return to_route('modules.index');
     }
@@ -127,7 +127,7 @@ class ModuleController extends Controller
     {
         $item->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Module deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Módulo eliminado exitosamente.')]);
 
         return to_route('modules.index');
     }

@@ -273,4 +273,16 @@ return [
         ],
     ],
 
+    'mail' => [
+        'temporary_password' => [
+            'subject' => 'Tu cuenta ha sido creada',
+            'greeting' => '¡Hola :name!',
+            'intro' => 'Se ha creado una cuenta para ti en :app.',
+            'password_label' => 'Tu contraseña temporal es:',
+            'login_action' => 'Iniciar sesión',
+            'change_requirement' => 'Deberás cambiar esta contraseña en tu primer inicio de sesión.',
+            'change_advice' => 'Por razones de seguridad, cambia tu contraseña lo antes posible.',
+        ],
+    ],
+
 ];

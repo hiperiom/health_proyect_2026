@@ -30,7 +30,7 @@ class AllergiesController extends Controller
     public function store(StoreAllergyRequest $request): RedirectResponse
     {
         $this->service->store($request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Alergias created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Alergia creada exitosamente.')]);
 
         return to_route('allergies.index');
     }
@@ -45,7 +45,7 @@ class AllergiesController extends Controller
     public function update(UpdateAllergyRequest $request, Allergy $item): RedirectResponse
     {
         $this->service->update($item, $request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Alergias updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Alergia actualizada exitosamente.')]);
 
         return to_route('allergies.index');
     }
@@ -53,7 +53,7 @@ class AllergiesController extends Controller
     public function destroy(Request $request, Allergy $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Alergias deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Alergia eliminada exitosamente.')]);
 
         return to_route('allergies.index');
     }

@@ -30,7 +30,7 @@ class HealthBackgroundsController extends Controller
     public function store(StoreHealthBackgroundRequest $request): RedirectResponse
     {
         $this->service->store($request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Antecedentes de Salud created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Antecedente de salud creado exitosamente.')]);
 
         return to_route('health-backgrounds.index');
     }
@@ -45,7 +45,7 @@ class HealthBackgroundsController extends Controller
     public function update(UpdateHealthBackgroundRequest $request, HealthBackground $item): RedirectResponse
     {
         $this->service->update($item, $request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Antecedentes de Salud updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Antecedente de salud actualizado exitosamente.')]);
 
         return to_route('health-backgrounds.index');
     }
@@ -53,7 +53,7 @@ class HealthBackgroundsController extends Controller
     public function destroy(Request $request, HealthBackground $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Antecedentes de Salud deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Antecedente de salud eliminado exitosamente.')]);
 
         return to_route('health-backgrounds.index');
     }

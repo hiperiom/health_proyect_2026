@@ -34,15 +34,17 @@ class UserCreatedTemporaryPassword extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $name = trim((string) $notifiable->name);
+
         return (new MailMessage)
-            ->subject('Your account has been created')
-            ->greeting('Hello '.$notifiable->name.'!')
-            ->line('An account has been created for you on '.config('app.name').'.')
-            ->line('Your temporary password is:')
+            ->subject(__('mail.temporary_password.subject'))
+            ->greeting(__('mail.temporary_password.greeting', ['name' => $name]))
+            ->line(__('mail.temporary_password.intro', ['app' => config('app.name')]))
+            ->line(__('mail.temporary_password.password_label'))
             ->line('**'.$this->temporaryPassword.'**')
-            ->action('Log in', route('login'))
-            ->line('You will be required to change this password on your first login.')
-            ->line('For security reasons, please change your password as soon as possible.');
+            ->action(__('mail.temporary_password.login_action'), route('login'))
+            ->line(__('mail.temporary_password.change_requirement'))
+            ->line(__('mail.temporary_password.change_advice'));
     }
 
     /**

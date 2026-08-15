@@ -126,15 +126,15 @@ return;
 }
 </script>
 <template>
-    <Head title="Modules" />
+    <Head title="Módulos" />
     <div class="flex h-full flex-col space-y-6">
         <div
             class="flex flex-col gap-4 px-3 sm:flex-row sm:items-center sm:justify-between"
         >
             <Heading
                 variant="small"
-                title="Modules"
-                description="Generate new CRUD modules"
+                title="Módulos"
+                description="Genera nuevos módulos CRUD"
             />
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="relative w-full sm:w-72">
@@ -144,27 +144,27 @@ return;
                     <Input
                         v-model="search"
                         type="search"
-                        placeholder="Search by name, display name or description..."
+                        placeholder="Buscar por nombre, nombre visible o descripción..."
                         class="pl-8"
                     />
                 </div>
                 <Sheet v-model:open="open">
                     <SheetTrigger as-child>
-                        <Button><Plus class="h-4 w-4" />New Module</Button>
+                        <Button><Plus class="h-4 w-4" />Nuevo Módulo</Button>
                     </SheetTrigger>
                     <SheetContent>
                         <SheetHeader>
                             <SheetTitle
                                 >{{
-                                    editingItem ? 'Edit' : 'Create'
+                                    editingItem ? 'Editar' : 'Crear'
                                 }}
-                                Module</SheetTitle
+                                Módulo</SheetTitle
                             >
                             <SheetDescription>
                                 {{
                                     editingItem
-                                        ? 'Update the module description and display name.'
-                                        : 'Create a new module. The CRUD for the given name will be generated automatically on save.'
+                                        ? 'Actualiza la descripción y el nombre visible del módulo.'
+                                        : 'Crea un nuevo módulo. El CRUD se generará automáticamente al guardar.'
                                 }}
                             </SheetDescription>
                         </SheetHeader>
@@ -183,7 +183,7 @@ return;
                             "
                         >
                             <div class="grid gap-2">
-                                <Label for="name">Name (PascalCase)</Label>
+                                <Label for="name">Nombre (PascalCase)</Label>
                                 <Input
                                     id="name"
                                     name="name"
@@ -193,13 +193,13 @@ return;
                                 />
                                 <InputError :message="errors.name" />
                                 <p class="text-xs text-muted-foreground">
-                                    Must start with an uppercase letter (e.g.
+                                    Debe comenzar con una letra mayúscula (ej.
                                     "UsersProfile", "OrderItem").
                                 </p>
                             </div>
                             <div class="grid gap-2">
                                 <Label for="display_name"
-                                    >Display name (sidebar)</Label
+                                    >Nombre visible (barra lateral)</Label
                                 >
                                 <Input
                                     id="display_name"
@@ -207,24 +207,24 @@ return;
                                     :default-value="
                                         editingItem?.display_name ?? ''
                                     "
-                                    placeholder="Users (shown in the dashboard sidebar)"
+                                    placeholder="Usuarios (se muestra en la barra lateral)"
                                 />
                                 <InputError :message="errors.display_name" />
                                 <p class="text-xs text-muted-foreground">
-                                    Optional. Human readable label shown in the
-                                    dashboard sidebar. Defaults to the name in
-                                    title case.
+                                    Opcional. Etiqueta legible que se muestra en
+                                    la barra lateral. Por defecto usa el nombre
+                                    en formato título.
                                 </p>
                             </div>
                             <div class="grid gap-2">
-                                <Label for="description">Description</Label>
+                                <Label for="description">Descripción</Label>
                                 <textarea
                                     id="description"
                                     name="description"
                                     :default-value="
                                         editingItem?.description ?? ''
                                     "
-                                    placeholder="What this module is for"
+                                    placeholder="Para qué sirve este módulo"
                                     class="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none"
                                 />
                                 <InputError :message="errors.description" />
@@ -232,11 +232,11 @@ return;
                             <SheetFooter>
                                 <SheetClose as-child
                                     ><Button variant="secondary"
-                                        >Cancel</Button
+                                        >Cancelar</Button
                                     ></SheetClose
                                 >
                                 <Button type="submit" :disabled="processing">{{
-                                    editingItem ? 'Update' : 'Generate CRUD'
+                                    editingItem ? 'Actualizar' : 'Generar CRUD'
                                 }}</Button>
                             </SheetFooter>
                         </Form>
@@ -250,23 +250,23 @@ return;
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete Module</DialogTitle>
+                    <DialogTitle>Eliminar Módulo</DialogTitle>
                     <DialogDescription
-                        >Are you sure you want to delete "{{
+                        >¿Estás seguro de que quieres eliminar "{{
                             itemToDelete?.name
-                        }}"? The generated CRUD files will remain on disk; only
-                        the record in the modules table is
-                        removed.</DialogDescription
+                        }}"? Los archivos CRUD generados permanecerán en el
+                        disco; solo se eliminará el registro de la tabla de
+                        módulos.</DialogDescription
                     >
                 </DialogHeader>
                 <DialogFooter class="gap-2">
                     <DialogClose as-child
                         ><Button variant="secondary"
-                            >Cancel</Button
+                            >Cancelar</Button
                         ></DialogClose
                     >
                     <Button variant="destructive" @click="deleteItem"
-                        >Delete</Button
+                        >Eliminar</Button
                     >
                 </DialogFooter>
             </DialogContent>
@@ -275,11 +275,11 @@ return;
             <table class="w-full text-left text-sm">
                 <thead class="bg-muted/50">
                     <tr>
-                        <th class="px-4 py-3 font-medium">Name</th>
-                        <th class="px-4 py-3 font-medium">Display name</th>
-                        <th class="px-4 py-3 font-medium">Description</th>
+                        <th class="px-4 py-3 font-medium">Nombre</th>
+                        <th class="px-4 py-3 font-medium">Nombre visible</th>
+                        <th class="px-4 py-3 font-medium">Descripción</th>
                         <th class="px-4 py-3 text-right font-medium">
-                            Actions
+                            Acciones
                         </th>
                     </tr>
                 </thead>
@@ -303,7 +303,7 @@ return;
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            aria-label="Actions"
+                                            aria-label="Acciones"
                                             ><MoreVertical class="h-4 w-4"
                                         /></Button>
                                     </DropdownMenuTrigger>
@@ -311,12 +311,12 @@ return;
                                         <DropdownMenuItem
                                             @click="openEditSheet(item)"
                                         >
-                                            <Pencil class="mr-2 h-4 w-4" />Edit
+                                            <Pencil class="mr-2 h-4 w-4" />Editar
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="confirmDelete(item)"
                                         >
-                                            <Trash class="mr-2 h-4 w-4" />Delete
+                                            <Trash class="mr-2 h-4 w-4" />Eliminar
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -328,7 +328,7 @@ return;
                             colspan="4"
                             class="px-4 py-8 text-center text-muted-foreground"
                         >
-                            No modules found.
+                            No se encontraron módulos.
                         </td>
                     </tr>
                 </tbody>
@@ -338,14 +338,14 @@ return;
             class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
         >
             <div class="text-sm text-muted-foreground">
-                Showing {{ items.from }} to {{ items.to }} of
-                {{ items.total }} results.
+                Mostrando {{ items.from }} a {{ items.to }} de
+                {{ items.total }} resultados.
             </div>
             <div
                 class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
             >
                 <div class="flex items-center gap-2">
-                    <span class="text-sm text-muted-foreground">Per page</span>
+                    <span class="text-sm text-muted-foreground">Por página</span>
                     <Select v-model="perPage">
                         <SelectTrigger class="w-20"
                             ><SelectValue
@@ -369,7 +369,7 @@ return;
                                 { preserveState: true, preserveScroll: true },
                             )
                         "
-                        >Previous</Button
+                        >Anterior</Button
                     >
                     <Button
                         variant="outline"
@@ -382,7 +382,7 @@ return;
                                 { preserveState: true, preserveScroll: true },
                             )
                         "
-                        >Next</Button
+                        >Siguiente</Button
                     >
                 </div>
             </div>

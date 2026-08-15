@@ -290,7 +290,7 @@ class MedicalHistoriesController extends Controller
         }
 
         $this->service->store($data);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Historias Clínicas created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Historia clínica creada exitosamente.')]);
 
         return to_route('medical-histories.index');
     }
@@ -320,7 +320,7 @@ class MedicalHistoriesController extends Controller
         }
 
         $this->service->update($item, $data);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Historias Clínicas updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Historia clínica actualizada exitosamente.')]);
 
         return to_route('medical-histories.index');
     }
@@ -328,7 +328,7 @@ class MedicalHistoriesController extends Controller
     public function destroy(Request $request, MedicalHistory $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Historias Clínicas deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Historia clínica eliminada exitosamente.')]);
 
         return to_route('medical-histories.index');
     }

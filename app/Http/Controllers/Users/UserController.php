@@ -272,6 +272,20 @@ class UserController extends Controller
         $roleIds = $data['role_ids'] ?? null;
         unset($data['role_ids']);
 
+        if ($roleIds !== null) {
+            $roleIds = $this->normalizeRoleIds($roleIds);
+
+            $roleGuardError = $this->roleAssignmentGuardError($user, $roleIds);
+            if ($roleGuardError !== null) {
+                return $this->denyWithError($roleGuardError);
+            }
+        }
+
+        $statusGuardError = $this->statusChangeGuardError($user, $data['status'] ?? null);
+        if ($statusGuardError !== null) {
+            return $this->denyWithError($statusGuardError);
+        }
+
         // Normalizar campos opcionales: "" → null, y convertir IDs a enteros.
         foreach (['state_id', 'municipality_id'] as $field) {
             if (array_key_exists($field, $data)) {
@@ -422,6 +436,14 @@ class UserController extends Controller
 
     public function resetPassword(User $user): RedirectResponse
     {
+        if ($user->id === auth()->id()) {
+            return $this->denyWithError(__('No puedes restablecer tu propia contraseña.'));
+        }
+
+        if ($this->isSuperuser($user) && ! $this->actingUserActiveAsSuperuser()) {
+            return $this->denyWithError(__('No puedes restablecer la contraseña de un superusuario.'));
+        }
+
         $temporaryPassword = Str::password(16);
 
         $user->update([
@@ -438,6 +460,20 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user): RedirectResponse
     {
+        if ($user->id === auth()->id()) {
+            return $this->denyWithError(__('No puedes eliminar tu propia cuenta.'));
+        }
+
+        if ($this->isSuperuser($user)) {
+            if (! $this->actingUserActiveAsSuperuser()) {
+                return $this->denyWithError(__('No puedes eliminar a un superusuario.'));
+            }
+
+            if ($this->isLastActiveSuperuser($user)) {
+                return $this->denyWithError(__('No puedes eliminar al último superusuario activo.'));
+            }
+        }
+
         $user->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Usuario eliminado exitosamente.')]);
@@ -464,7 +500,12 @@ class UserController extends Controller
     public function assignRoles(AssignRolesRequest $request, User $user): RedirectResponse
     {
         $data = $request->validated();
-        $roleIds = array_values(array_unique($data['role_ids'] ?? []));
+        $roleIds = $this->normalizeRoleIds($data['role_ids'] ?? []);
+
+        $roleGuardError = $this->roleAssignmentGuardError($user, $roleIds);
+        if ($roleGuardError !== null) {
+            return $this->denyWithError($roleGuardError);
+        }
 
         $user->roles()->sync($roleIds);
 
@@ -478,6 +519,122 @@ class UserController extends Controller
         if ($profile->photo_path && Storage::disk('public')->exists($profile->photo_path)) {
             Storage::disk('public')->delete($profile->photo_path);
         }
+    }
+
+    /**
+     * Flash an error toast and redirect back when a user tries to
+     * manipulate their own account in a way that could lock them out.
+     */
+    private function denyWithError(string $message): RedirectResponse
+    {
+        Inertia::flash('toast', ['type' => 'error', 'message' => $message]);
+
+        return back();
+    }
+
+    /**
+     * Determine whether the given user holds the superuser role.
+     */
+    private function isSuperuser(User $user): bool
+    {
+        return $user->roles()->where('roles.slug', Role::SUPERUSER_SLUG)->exists();
+    }
+
+    /**
+     * Determine whether the given user is the only active superuser.
+     */
+    private function isLastActiveSuperuser(User $user): bool
+    {
+        if ($user->status !== UserStatus::Active || ! $this->isSuperuser($user)) {
+            return false;
+        }
+
+        return ! User::query()
+            ->where('status', UserStatus::Active)
+            ->where('id', '!=', $user->id)
+            ->whereHas('roles', fn ($query) => $query->where('roles.slug', Role::SUPERUSER_SLUG))
+            ->exists();
+    }
+
+    /**
+     * Determine whether the authenticated user is currently active as
+     * superuser, the only actor allowed to manage superusers.
+     */
+    private function actingUserActiveAsSuperuser(): bool
+    {
+        return auth()->user()?->activeRole?->slug === Role::SUPERUSER_SLUG;
+    }
+
+    private function superuserRole(): ?Role
+    {
+        return Role::query()->where('slug', Role::SUPERUSER_SLUG)->first();
+    }
+
+    /**
+     * Normalize a set of role ids to unique integers.
+     *
+     * @param  array<int, int|string>  $roleIds
+     * @return array<int, int>
+     */
+    private function normalizeRoleIds(array $roleIds): array
+    {
+        return array_values(array_unique(array_map(fn ($id): int => (int) $id, $roleIds)));
+    }
+
+    /**
+     * Return an error message when the role assignment would let the
+     * actor lock themselves out or escalate privileges, or null when
+     * the assignment is allowed.
+     *
+     * @param  array<int, int>  $roleIds
+     */
+    private function roleAssignmentGuardError(User $target, array $roleIds): ?string
+    {
+        $superuserRoleId = $this->superuserRole()?->id;
+        $keepsSuperuserRole = $superuserRoleId !== null && in_array($superuserRoleId, $roleIds, true);
+
+        if ($target->id === auth()->id() && $this->isSuperuser($target) && ! $keepsSuperuserRole) {
+            return __('No puedes quitarte el rol de superusuario.');
+        }
+
+        if ($this->isLastActiveSuperuser($target) && ! $keepsSuperuserRole) {
+            return __('No puedes quitar el rol de superusuario al último superusuario activo.');
+        }
+
+        if (! $this->actingUserActiveAsSuperuser()) {
+            if ($this->isSuperuser($target)) {
+                return __('No puedes modificar los roles de un superusuario.');
+            }
+
+            if ($superuserRoleId !== null && in_array($superuserRoleId, $roleIds, true)) {
+                return __('No puedes asignar el rol de superusuario.');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Return an error message when the status change would let the
+     * actor lock themselves out, or null when the change is allowed.
+     */
+    private function statusChangeGuardError(User $target, ?string $newStatus): ?string
+    {
+        if ($newStatus === null || $newStatus === UserStatus::Active->value) {
+            return null;
+        }
+
+        $inactiveStatuses = [UserStatus::Inactive->value, UserStatus::Archived->value];
+
+        if ($target->id === auth()->id() && in_array($newStatus, $inactiveStatuses, true)) {
+            return __('No puedes desactivar tu propia cuenta.');
+        }
+
+        if ($this->isLastActiveSuperuser($target) && in_array($newStatus, $inactiveStatuses, true)) {
+            return __('No puedes desactivar al último superusuario activo.');
+        }
+
+        return null;
     }
 
     /**

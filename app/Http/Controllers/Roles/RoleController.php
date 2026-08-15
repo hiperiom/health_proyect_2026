@@ -82,7 +82,7 @@ class RoleController extends Controller
     {
         $role = Role::create($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Role created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Rol creado exitosamente.')]);
 
         return to_route('roles.index');
     }
@@ -112,7 +112,7 @@ class RoleController extends Controller
         $role = Role::query()->findOrFail($item);
         $role->update($request->validated());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Role updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Rol actualizado exitosamente.')]);
 
         return to_route('roles.index');
     }
@@ -122,7 +122,7 @@ class RoleController extends Controller
         $role = Role::query()->findOrFail($item);
         $role->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Role deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Rol eliminado exitosamente.')]);
 
         return to_route('roles.index');
     }
@@ -169,7 +169,7 @@ class RoleController extends Controller
             }
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permissions updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permisos actualizados exitosamente.')]);
 
         return to_route('roles.index');
     }
@@ -197,7 +197,7 @@ class RoleController extends Controller
                 ->delete();
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Modules updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Módulos actualizados exitosamente.')]);
 
         return to_route('roles.index');
     }
@@ -240,7 +240,7 @@ class RoleController extends Controller
             }
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permissions updated for the module.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Permisos actualizados para el módulo.')]);
 
         return to_route('roles.index');
     }

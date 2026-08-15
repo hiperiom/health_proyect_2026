@@ -30,7 +30,7 @@ class DoctorsController extends Controller
     public function store(StoreDoctorRequest $request): RedirectResponse
     {
         $this->service->store($request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Doctores created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Doctor creado exitosamente.')]);
 
         return to_route('doctors.index');
     }
@@ -45,7 +45,7 @@ class DoctorsController extends Controller
     public function update(UpdateDoctorRequest $request, Doctor $item): RedirectResponse
     {
         $this->service->update($item, $request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Doctores updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Doctor actualizado exitosamente.')]);
 
         return to_route('doctors.index');
     }
@@ -53,7 +53,7 @@ class DoctorsController extends Controller
     public function destroy(Request $request, Doctor $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Doctores deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Doctor eliminado exitosamente.')]);
 
         return to_route('doctors.index');
     }

@@ -23,7 +23,7 @@ class SwitchRoleController extends Controller
         if (! $user->roles()->where('role_id', $role->id)->exists()) {
             Inertia::flash('toast', [
                 'type' => 'error',
-                'message' => __('You are not authorized to use this role.'),
+                'message' => __('No estás autorizado para usar este rol.'),
             ]);
 
             return to_route('dashboard');
@@ -33,7 +33,7 @@ class SwitchRoleController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => __('Active role changed to :role.', ['role' => $role->name]),
+            'message' => __('Rol activo cambiado a :role.', ['role' => $role->name]),
         ]);
 
         return to_route('dashboard');

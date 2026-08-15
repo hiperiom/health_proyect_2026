@@ -186,7 +186,7 @@
     <div class="flex h-full flex-col space-y-6">
         <Alert v-if="page.props.flash?.toast?.type === 'success'" variant="default" class="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
             <CircleCheck class="h-4 w-4" />
-            <AlertTitle>Success</AlertTitle>
+            <AlertTitle>Éxito</AlertTitle>
             <AlertDescription>{{ page.props.flash.toast.message }}</AlertDescription>
         </Alert>
         <div class="flex flex-col gap-4 px-3 sm:flex-row sm:items-center sm:justify-between">
@@ -277,7 +277,7 @@
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem @click="openEditSheet(item)"><Pencil class="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                        <DropdownMenuItem @click="confirmDelete(item)"><Trash class="mr-2 h-4 w-4" /> Emininar</DropdownMenuItem>
+                                        <DropdownMenuItem @click="confirmDelete(item)"><Trash class="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -291,7 +291,7 @@
         </div>
 
         <div class="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 border-t bg-background px-3 py-3 sm:flex-row sm:items-center sm:justify-between" id="tour-pagination">
-            <div class="text-sm text-muted-foreground">Mostrando {{ items.from }} de {{ items.to }} de {{ items.total }} resultadoss.</div>
+            <div class="text-sm text-muted-foreground">Mostrando del {{ items.from }} al {{ items.to }} de {{ items.total }} resultados.</div>
             <div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                 <div class="flex items-center gap-2">
                     <span class="text-sm text-muted-foreground">Por página</span>

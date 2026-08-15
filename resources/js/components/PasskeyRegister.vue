@@ -84,7 +84,7 @@ const handleCancel = () => {
                 autofocus
             />
             <p class="text-xs text-muted-foreground">
-                Un nombre te ayuda a identificar esta llave de acceso mÃ¡s tarde.
+                Un nombre te ayuda a identificar esta llave de acceso más tarde.
             </p>
         </div>
 
@@ -95,7 +95,7 @@ const handleCancel = () => {
                 {{ isLoading ? 'Registrando...' : 'Registrar llave de acceso' }}
             </Button>
             <Button type="button" variant="ghost" @click="handleCancel">
-                Cancel
+                Cancelar
             </Button>
         </div>
     </form>

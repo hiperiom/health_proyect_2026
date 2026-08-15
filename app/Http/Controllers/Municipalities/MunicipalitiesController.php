@@ -30,7 +30,7 @@ class MunicipalitiesController extends Controller
     public function store(StoreMunicipalityRequest $request): RedirectResponse
     {
         $this->service->store($request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipios created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipio creado exitosamente.')]);
 
         return to_route('municipalities.index');
     }
@@ -45,7 +45,7 @@ class MunicipalitiesController extends Controller
     public function update(UpdateMunicipalityRequest $request, Municipality $item): RedirectResponse
     {
         $this->service->update($item, $request->validated());
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipios updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipio actualizado exitosamente.')]);
 
         return to_route('municipalities.index');
     }
@@ -53,7 +53,7 @@ class MunicipalitiesController extends Controller
     public function toggleActive(Request $request, Municipality $item): RedirectResponse
     {
         $this->service->toggleActive($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipios updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipio actualizado exitosamente.')]);
 
         return to_route('municipalities.index');
     }
@@ -61,7 +61,7 @@ class MunicipalitiesController extends Controller
     public function destroy(Request $request, Municipality $item): RedirectResponse
     {
         $this->service->destroy($item);
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipios deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Municipio eliminado exitosamente.')]);
 
         return to_route('municipalities.index');
     }

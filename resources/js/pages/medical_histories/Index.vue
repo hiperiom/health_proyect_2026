@@ -673,7 +673,7 @@ const startTour = () => {
     <div class="flex h-full flex-col space-y-6">
         <Alert v-if="(page.props.flash as any)?.toast?.type === 'success'" variant="default" class="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
             <CircleCheck class="h-4 w-4" />
-            <AlertTitle>Success</AlertTitle>
+                    <AlertTitle>Éxito</AlertTitle>
             <AlertDescription>{{ (page.props.flash as any)?.toast?.message }}</AlertDescription>
         </Alert>
         <div class="flex flex-col gap-4 px-3 sm:flex-row sm:items-center sm:justify-between">
