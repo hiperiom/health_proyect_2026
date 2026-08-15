@@ -124,7 +124,7 @@ class HandleInertiaRequests extends Middleware
         $default = config('app.locale', self::SUPPORTED_LOCALES[0]);
 
         $candidate = $request->input('locale')
-            ?? $request->session()->get('locale')
+            ?? ($request->hasSession() ? $request->session()->get('locale') : null)
             ?? $default;
 
         if (! in_array($candidate, self::SUPPORTED_LOCALES, true)) {
@@ -135,7 +135,9 @@ class HandleInertiaRequests extends Middleware
             $candidate = self::SUPPORTED_LOCALES[0];
         }
 
-        $request->session()->put('locale', $candidate);
+        if ($request->hasSession()) {
+            $request->session()->put('locale', $candidate);
+        }
         App::setLocale($candidate);
 
         return $candidate;

@@ -1,8 +1,9 @@
-﻿import '../css/app.css';
+import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createSSRApp, h, type DefineComponent } from 'vue';
+import { createSSRApp, h } from 'vue';
+import type { DefineComponent } from 'vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import { bootstrapI18nFromInertia } from '@/composables/useI18n';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -23,6 +24,8 @@ createInertiaApp({
                 return null;
             case name === 'Dashboard':
                 return DashboardLayout;
+            case name === 'errors/ErrorPage':
+                return null;
             case name === 'auth/RoleSelect':
                 return RoleSelectLayout;
             case name === 'auth/Login':
